@@ -1,6 +1,10 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import date
 from enum import Enum
+
+class TypeOfDocument(str, Enum):
+    POLICY = "Política"
+    PROCEDURE = "Procedimiento"
 
 class Classification(str, Enum):
     PUBLICA = "Pública"
@@ -8,9 +12,8 @@ class Classification(str, Enum):
     CONFIDENCIAL = "Confidencial"
 
 class DocumentCreate(BaseModel):
-    name: str = Field(..., max_length=150)
-    code: str  # validar formato externamente
-    version: str
+    name: str
+    type: TypeOfDocument
     area_responsible: str
     author: str
     reviewer: str
@@ -20,3 +23,5 @@ class DocumentCreate(BaseModel):
 class Document(DocumentCreate):
     id: int
     created_at: date
+    code: str
+    version: str
