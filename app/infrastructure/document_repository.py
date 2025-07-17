@@ -1,23 +1,20 @@
-# app/infrastructure/document_repository.py
-
 import csv
 from pathlib import Path
 from datetime import date
-from typing import List
-from app.schemas.document import Document, DocumentCreate, TypeOfDocument, Classification
+from typing import List, Optional
 
-# Carpeta y archivo donde se guardarán los registros
+from app.schemas.document import DocumentCreate, Document, TypeOfDocument, Classification
+
 BASE_DIR = Path("data")
-CSV_FILE = BASE_DIR / "documents.csv"
+DOC_CSV = BASE_DIR / "documents.csv"
 
 class DocumentRepository:
 
     @classmethod
     def _ensure_storage(cls):
-        """Crea la carpeta y el CSV con cabecera si no existen."""
         BASE_DIR.mkdir(parents=True, exist_ok=True)
-        if not CSV_FILE.exists():
-            with CSV_FILE.open("w", newline="", encoding="utf-8") as f:
+        if not DOC_CSV.exists():
+            with DOC_CSV.open("w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 writer.writerow([
                     "id",
@@ -34,54 +31,42 @@ class DocumentRepository:
                 ])
 
     @classmethod
-    def get_next_id(cls, doc_type: TypeOfDocument) -> int:
-        """Calcula el próximo ID como max(id) + 1 para un tipo de documento específico."""
+    def exists(cls, name: str, doc_type: TypeOfDocument) -> bool:
+        """Devuelve True si ya hay un documento con mismo name+type."""
         cls._ensure_storage()
-        max_id = 0
-        with CSV_FILE.open("r", newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                try:
-                    # Solo consideramos documentos del mismo tipo
-                    if row["type"] == doc_type.value:
-                        rid = int(row["id"])
-                        if rid > max_id:
-                            max_id = rid
-                except ValueError:
-                    continue
-        return max_id + 1
-        
-    @classmethod
-    def get_next_version(cls, name: str, doc_type: TypeOfDocument) -> int:
-        """Calcula la próxima versión para un documento con el mismo nombre y tipo.
-        Si existe, incrementa en 1 la versión, si no, devuelve 1."""
-        cls._ensure_storage()
-        max_version = 0
-        with CSV_FILE.open("r", newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
+        with DOC_CSV.open("r", newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
                 if row["name"] == name and row["type"] == doc_type.value:
-                    try:
-                        version = int(row["version"])
-                        if version > max_version:
-                            max_version = version
-                    except ValueError:
-                        continue
-        return max_version + 1 if max_version > 0 else 1
+                    return True
+        return False
 
     @classmethod
-    def create_document(cls, data: DocumentCreate, code: str, next_id:str) -> Document:
+    def get_next_id(cls, doc_type: TypeOfDocument) -> int:
         """
-        Crea el registro en CSV y devuelve el objeto Document.
-        version siempre "1".
+        Siguiente secuencia para el código:
+        Si ya existe un nombre idéntico, NO avanza (debe versionar).
+        """
+        cls._ensure_storage()
+        max_id = 0
+        with DOC_CSV.open("r", newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                if row["type"] == doc_type.value:
+                    rid = int(row["id"])
+                    if rid > max_id:
+                        max_id = rid
+        return max_id + 1
+
+    @classmethod
+    def create_document(cls, data: DocumentCreate, code: str) -> Document:
+        """
+        Inserta versión 1 del documento.
         """
         cls._ensure_storage()
         new_id = cls.get_next_id(data.type)
         created = date.today()
-        version = str(next_id)
+        version = "1"
 
-        # Añadimos la fila al CSV
-        with CSV_FILE.open("a", newline="", encoding="utf-8") as f:
+        with DOC_CSV.open("a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow([
                 new_id,
@@ -97,7 +82,6 @@ class DocumentRepository:
                 version
             ])
 
-        # Devolvemos el Pydantic model
         return Document(
             id=new_id,
             name=data.name,
@@ -113,15 +97,89 @@ class DocumentRepository:
         )
 
     @classmethod
-    def list_documents(cls) -> List[Document]:
-        """Lee todo el CSV y devuelve la lista de Document."""
+    def get_document(cls, doc_id: str) -> Optional[Document]:
+        """Recupera un documento por su ID (última versión registrada)."""
         cls._ensure_storage()
-        docs: List[Document] = []
-
-        with CSV_FILE.open("r", newline="", encoding="utf-8") as f:
+        with DOC_CSV.open("r", newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                if row["code"] == doc_id:
+                    return Document(
+                        id=int(row["id"]),
+                        name=row["name"],
+                        type=TypeOfDocument(row["type"]),
+                        area_responsible=row["area_responsible"],
+                        author=row["author"],
+                        reviewer=row["reviewer"],
+                        approver=row["approver"],
+                        classification=Classification(row["classification"]),
+                        created_at=date.fromisoformat(row["created_at"]),
+                        code=row["code"],
+                        version=row["version"]
+                    )
+        return None
+    
+    @classmethod
+    def update_version(cls, code: str, new_version: str) -> None:
+        """
+        Actualiza el campo 'version' para el registro con id = doc_id
+        en documents.csv.
+        """
+        cls._ensure_storage()
+        # 1) Leer todo
+        rows = []
+        with DOC_CSV.open("r", newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                docs.append(Document(
+                if row["code"] == code:
+                    row["version"] = new_version
+                rows.append(row)
+
+        # 2) Reescribir CSV completo con la nueva versión
+        with DOC_CSV.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            # encabezados en el mismo orden
+            writer.writerow([
+                "id","name","type","area_responsible","author",
+                "reviewer","approver","classification",
+                "created_at","code","version"
+            ])
+            for row in rows:
+                writer.writerow([
+                    row["id"],
+                    row["name"],
+                    row["type"],
+                    row["area_responsible"],
+                    row["author"],
+                    row["reviewer"],
+                    row["approver"],
+                    row["classification"],
+                    row["created_at"],
+                    row["code"],
+                    row["version"]
+                ])
+
+    @classmethod
+    def list_documents(
+        cls,
+        filter_type: TypeOfDocument | None = None,
+        filter_area: str | None = None
+    ) -> List[Document]:
+        """
+        Lee todos los documentos y aplica filtros si vienen.
+        """
+        cls._ensure_storage()
+        results: List[Document] = []
+        with DOC_CSV.open("r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # filtro por tipo
+                if filter_type and row["type"] != filter_type.value:
+                    continue
+                # filtro por área (case-insensitive, parcial)
+                if filter_area and filter_area.lower() not in row["area_responsible"].lower():
+                    continue
+                # reconstruir modelo
+                results.append(Document(
                     id=int(row["id"]),
                     name=row["name"],
                     type=TypeOfDocument(row["type"]),
@@ -134,5 +192,4 @@ class DocumentRepository:
                     code=row["code"],
                     version=row["version"]
                 ))
-
-        return docs
+        return results

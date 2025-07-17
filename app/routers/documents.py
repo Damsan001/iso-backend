@@ -1,9 +1,16 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from typing import List
+from fastapi import Query
+from typing import Optional
 from app.schemas.document import (
     DocumentCreate, Document,
     TypeOfDocument, Classification
 )
+from fastapi.responses import FileResponse
+from pathlib import Path
+from app.schemas.version import VersionCreate, VersionInfo
 from app.services.document_service import DocumentService
+from app.infrastructure.version_repository import VersionRepository
 
 router = APIRouter(tags=["Documentos"])
 
@@ -34,65 +41,60 @@ async def create_document(
     )
     return await DocumentService.create_document(dto, file)
 
+@router.post("/{code}/versions", response_model=VersionInfo)
+async def create_version(
+    code: str,
+    description: str = Form(..., description="Descripción del cambio"),
+    justification: str = Form(..., description="Justificación del cambio"),
+    requested_by: str = Form(..., description="Usuario solicitante"),
+    file: UploadFile = File(...)
+):
+    version_data = VersionCreate(
+        description=description,
+        justification=justification,
+        requested_by=requested_by
+    )
+    return await DocumentService.add_version(code, version_data, file)
 
-# from fastapi import APIRouter, HTTPException, Depends, Query
-# from typing import List
-# from app.schemas.document import DocumentCreate, Document
-# from app.schemas.responsible import ResponsibleAssignment
-# from app.schemas.review import ReviewRequest
-# from app.schemas.version import VersionCreate, VersionInfo
-# from app.schemas.export import ExportRequest, ExportFormat
-# from app.services.document_service import DocumentService
 
-# router = APIRouter()
+@router.get("/{code}/versions", response_model=List[VersionInfo])
+def list_versions(code: str):
+    # opcional: validar existencia de doc_id
+    return VersionRepository.list_versions(code)
 
-# @router.post("/", response_model=Document)
-# def create_document(doc: DocumentCreate):
-#     return DocumentService.create_document(doc)
+@router.get("/", response_model=List[Document])
+def list_documents(
+    type: Optional[TypeOfDocument] = Query(
+        None, description="Filtrar por tipo de documento"),
+    area_responsible: Optional[str] = Query(
+        None, description="Filtrar por área responsable (texto libre)")
+):
+    """
+    Lista documentos; acepta filtros opcionales de tipo y área.
+    """
+    return DocumentService.list_documents(type, area_responsible)
 
-# @router.post("/{doc_id}/responsibles", status_code=204)
-# def set_responsibles(doc_id: int, assignment: ResponsibleAssignment):
-#     if not DocumentService.get_document(doc_id):
-#         raise HTTPException(404, "Documento no encontrado")
-#     DocumentService.assign_responsibles(doc_id, assignment)
-#     return
+@router.get("/{code}/view", response_class=FileResponse)
+def download_document(code: str):
+    """
+    Devuelve el PDF de la versión actual para mostrar en línea.
+    Solo usuarios con permiso 'view_document' podrán acceder.
+    """
+    # 1) Validar existencia y permisos
+    doc = DocumentService.get_document(code)
+    if not doc:
+        raise HTTPException(404, "Documento no encontrado")
+    # if not current_user.has_permission("view_document", doc_id):
+    #     raise HTTPException(403, "No tienes permiso para ver este documento")
 
-# @router.post("/{doc_id}/review", status_code=204)
-# def review_document(doc_id: int, review: ReviewRequest):
-#     if not DocumentService.get_document(doc_id):
-#         raise HTTPException(404, "Documento no encontrado")
-#     if review.action == review.REQUEST_CHANGES and not review.comments:
-#         raise HTTPException(400, "Debe indicar comentarios al solicitar cambios")
-#     DocumentService.review_document(doc_id, review)
-#     return
+    # 2) Obtener ruta al archivo
+    file_path = DocumentService.get_latest_file_path(code)
+    if not Path(file_path).exists():
+        raise HTTPException(404, "Archivo no encontrado")
 
-# @router.post("/{doc_id}/versions", response_model=VersionInfo)
-# def add_version(doc_id: int, version: VersionCreate):
-#     if not DocumentService.get_document(doc_id):
-#         raise HTTPException(404, "Documento no encontrado")
-#     return DocumentService.add_version(doc_id, version)
-
-# @router.get("/{doc_id}/versions", response_model=List[VersionInfo])
-# def get_versions(doc_id: int):
-#     if not DocumentService.get_document(doc_id):
-#         raise HTTPException(404, "Documento no encontrado")
-#     return DocumentService.get_version_history(doc_id)
-
-# @router.get("/", response_model=List[Document])
-# def list_documents(
-#     role: str = Query(..., description="Rol del usuario"),
-#     classification: str = Query(..., description="Clasificación")
-# ):
-#     return DocumentService.list_visible_documents(role, classification)
-
-# @router.get("/{doc_id}", response_model=Document)
-# def get_document(doc_id: int):
-#     doc = DocumentService.get_document(doc_id)
-#     if not doc:
-#         raise HTTPException(404, "Documento no encontrado")
-#     return doc
-
-# @router.post("/export", response_model=dict)
-# def export_docs(req: ExportRequest, role: str = Query(...), classification: str = Query(...)):
-#     data = DocumentService.export_documents(role, classification, req.format)
-#     return {"file_bytes": data}  # Adaptar para streaming en producción
+    # 3) Envío inline (no fuerza descarga)
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{Path(file_path).name}"'}
+    )
