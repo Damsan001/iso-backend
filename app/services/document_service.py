@@ -7,6 +7,7 @@ from app.infrastructure.document_repository import DocumentRepository
 from app.infrastructure.version_repository import VersionRepository
 from app.services.storage_service import LocalStorageService
 from app.schemas.document import TypeOfDocument
+from app.utils.text_utils import clear_name
 
 storage = LocalStorageService()
 

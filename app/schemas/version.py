@@ -12,3 +12,4 @@ class VersionInfo(BaseModel):
     description: str
     justification: str
     requested_by: str
+

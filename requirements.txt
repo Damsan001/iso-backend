@@ -4,3 +4,7 @@ pydantic
 pytest         
 httpx  
 python-multipart
+bcrypt
+python-jose
+pydantic[email]
+openpyxl
