@@ -8,3 +8,4 @@ bcrypt
 python-jose
 pydantic[email]
 openpyxl
+pandas
