@@ -9,7 +9,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg2://admin:admin123@localhost:5432/postgres",
+    "postgresql+psycopg2://admin:admin@localhost:5432/postgres",
 )
 
 # IMPORTANT: ensure we look first into schema 'iso' and then 'public'

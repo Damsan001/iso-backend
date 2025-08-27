@@ -9,3 +9,9 @@ python-jose
 pydantic[email]
 openpyxl
 pandas
+sqlalchemy
+psycopg2
+alembic>=1.13,<2.0
+passlib
+dotenv
+starlette
