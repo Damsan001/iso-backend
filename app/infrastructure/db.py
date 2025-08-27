@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+load_dotenv()
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+psycopg2://admin:admin123@localhost:5432/postgres",
+)
+
+# IMPORTANT: ensure we look first into schema 'iso' and then 'public'
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    future=True,
+    connect_args={"options": "-csearch_path=iso,public"},
+)
+
+# All tables live in schema iso
+metadata = MetaData(schema="iso")
+Base = declarative_base(metadata=metadata)
+
+# Session factory
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
