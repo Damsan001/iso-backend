@@ -3,68 +3,216 @@ from __future__ import annotations
 from datetime import datetime, date
 from sqlalchemy import (
     BigInteger, Boolean, Column, Date, ForeignKey,
-    Numeric, Text, TIMESTAMP
+    Numeric, Text,DateTime,Integer,Index, text, String
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from .db import Base
 
 # --- Generic catalogs (iso.catalog & iso.catalog_item) ---
 class Catalog(Base):
     __tablename__ = "catalog"
-    catalog_id = Column(BigInteger, primary_key=True)
-    catalog_key = Column(Text, nullable=False, unique=True)  # e.g. "tipo_activo"
+    __table_args__ = {"schema": "iso"}
+    catalog_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    catalog_key = Column(Text, nullable=False, unique=True)
     name = Column(Text, nullable=False)
     description = Column(Text)
-    is_hierarchical = Column(Boolean, nullable=False, default=False)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    is_hierarchical = Column(Boolean, nullable=False, default=False, server_default="false")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 class CatalogItem(Base):
     __tablename__ = "catalog_item"
-    item_id = Column(BigInteger, primary_key=True)
-    catalog_id = Column(BigInteger, ForeignKey("iso.catalog.catalog_id"), nullable=False)
-    empresa_id = Column(BigInteger, nullable=True)  # NULL means global
+    __table_args__ = {"schema": "iso"}
+    item_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    catalog_id = Column(BigInteger, ForeignKey("iso.catalog.catalog_id", ondelete="CASCADE"), nullable=False)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id"), nullable=True)
     code = Column(Text)
     name = Column(Text, nullable=False)
     description = Column(Text)
-    sort_order = Column(BigInteger, nullable=False, default=0)
-    active = Column(Boolean, nullable=False, default=True)
+    sort_order = Column(Integer, nullable=False, default=0, server_default="0")
+    active = Column(Boolean, nullable=False, default=True, server_default="true")
     parent_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
-    deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
-
-    catalog = relationship("Catalog", lazy="selectin")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
 
 # --- Assets (iso.activo) ---
 class Activo(Base):
     __tablename__ = "activo"
+    __table_args__ = {"schema": "iso"}
 
-    activo_id = Column(BigInteger, primary_key=True)
-    empresa_id = Column(BigInteger, nullable=False)
-
+    activo_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id"), nullable=False)
     nombre = Column(Text, nullable=False)
-    marca = Column(Text, nullable=False)
-    # Catalog references
-    tipo_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
-    estado_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
-    clasificacion_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
-    area_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
-
-    # Free fields
+    tipo_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=False)
+    estado_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=False)
+    clasificacion_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=False)
+    propietario_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id"), nullable=True)
+    custodio_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id"), nullable=True)
     descripcion = Column(Text)
     ubicacion = Column(Text)
     fecha_adquisicion = Column(Date)
-    valor = Column(Numeric(14, 2))
+    valor = Column(Numeric(18, 2))
     numero_serie = Column(Text)
+    marca = Column(Text)
     modelo = Column(Text)
+    imagen_url = Column(Text)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+    area_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
 
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
-    deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
+class ComentarioRevision(Base):
+    __tablename__ = "comentario_revision"
+    __table_args__ = {"schema": "iso"}
+    comentario_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    version_id = Column(BigInteger, ForeignKey("iso.documento_version.version_id", ondelete="CASCADE"), nullable=False)
+    usuario_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id"), nullable=False)
+    comentario = Column(Text, nullable=False)
+    archivo_url = Column(Text)
+    fecha = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    estatus_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
+    deleted_at = Column(DateTime(timezone=True))
 
-    # Joined relationships to expose readable names in responses if desired
-    tipo = relationship("CatalogItem", foreign_keys=[tipo_item_id], lazy="joined")
-    estado = relationship("CatalogItem", foreign_keys=[estado_item_id], lazy="joined")
-    clasificacion = relationship("CatalogItem", foreign_keys=[clasificacion_item_id], lazy="joined")
-    area = relationship("CatalogItem", foreign_keys=[area_item_id], lazy="joined")
+class Documento(Base):
+    __tablename__ = "documento"
+    __table_args__ = {"schema": "iso"}
+    documento_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id"), nullable=False)
+    nombre = Column(Text, nullable=False)
+    codigo = Column(Text)
+    tipo_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=False)
+    area_responsable_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
+    clasificacion_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
+    visible_empresa = Column(Boolean, nullable=False, default=True, server_default="true")
+    creador_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+class DocumentoACL(Base):
+    __tablename__ = "documento_acl"
+    __table_args__ = {"schema": "iso"}
+    acl_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    documento_id = Column(BigInteger, ForeignKey("iso.documento.documento_id", ondelete="CASCADE"), nullable=False)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id"), nullable=True)
+    rol_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
+    area_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=True)
+    permiso_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=False)
+    nivel = Column(Integer, nullable=False, default=0, server_default="0")
+    creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+
+class DocumentoVersion(Base):
+    __tablename__ = "documento_version"
+    __table_args__ = {"schema": "iso"}
+    version_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    documento_id = Column(BigInteger, ForeignKey("iso.documento.documento_id", ondelete="CASCADE"), nullable=False)
+    numero_version = Column(Integer, nullable=False)
+    descripcion = Column(Text)
+    justificacion = Column(Text)
+    estado_item_id = Column(BigInteger, ForeignKey("iso.catalog_item.item_id"), nullable=False)
+    archivo_url = Column(Text)
+    creado_por_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id"), nullable=True)
+    creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    aprobado_por_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id"), nullable=True)
+    fecha_autorizacion = Column(DateTime(timezone=True))
+    deleted_at = Column(DateTime(timezone=True))
+
+class Empresa(Base):
+    __tablename__ = "empresa"
+    __table_args__ = {"schema": "iso"}
+    empresa_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    nombre_legal = Column(Text, nullable=False)
+    rfc = Column(Text)
+    estatus = Column(Text)
+    fecha_registro = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+
+class Usuario(Base):
+    __tablename__ = "usuario"
+    __table_args__ = (
+        Index("uq_usuario_empresa_email", "empresa_id", text("lower(email)"), unique=True),
+        {"schema": "iso"},
+    )
+    usuario_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id", ondelete="CASCADE"), nullable=False)
+    area_id = Column(BigInteger, ForeignKey("iso.areas.area_id", ondelete="RESTRICT"), nullable=False)
+    first_name = Column(Text, nullable=False)
+    last_name = Column(Text, nullable=False)
+    email = Column(Text, nullable=False)
+    hashed_password = Column(String)
+    activo = Column(Boolean, nullable=False, default=True, server_default="true")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+    area = relationship("Areas", back_populates="usuarios")
+
+class Rol(Base):
+    __tablename__ = "rol"
+    __table_args__ = (
+        Index("uq_rol_empresa_nombre", "empresa_id", text("lower(nombre)"), unique=True),
+        {"schema": "iso"},
+    )
+    rol_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id", ondelete="CASCADE"), nullable=False)
+    nombre = Column(Text, nullable=False)
+    descripcion = Column(Text)
+    activo = Column(Boolean, nullable=False, default=True, server_default="true")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+
+class Permiso(Base):
+    __tablename__ = "permiso"
+    __table_args__ = (
+        Index("uq_permiso_scope", "empresa_id", text("upper(codigo)"), unique=True),
+        {"schema": "iso"},
+    )
+    permiso_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id", ondelete="CASCADE"), nullable=True)
+    codigo = Column(Text, nullable=False)
+    nombre = Column(Text, nullable=False)
+    descripcion = Column(Text)
+    activo = Column(Boolean, nullable=False, default=True, server_default="true")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+
+class RolPermiso(Base):
+    __tablename__ = "rol_permiso"
+    __table_args__ = {"schema": "iso"}
+    rol_id = Column(BigInteger, ForeignKey("iso.rol.rol_id", ondelete="CASCADE"), primary_key=True)
+    permiso_id = Column(BigInteger, ForeignKey("iso.permiso.permiso_id", ondelete="CASCADE"), primary_key=True)
+
+class UsuarioRol(Base):
+    __tablename__ = "usuario_rol"
+    __table_args__ = {"schema": "iso"}
+    usuario_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id", ondelete="CASCADE"), primary_key=True)
+    rol_id = Column(BigInteger, ForeignKey("iso.rol.rol_id", ondelete="CASCADE"), primary_key=True)
+
+class UsuarioPermiso(Base):
+    __tablename__ = "usuario_permiso"
+    __table_args__ = {"schema": "iso"}
+    usuario_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id", ondelete="CASCADE"), primary_key=True)
+    permiso_id = Column(BigInteger, ForeignKey("iso.permiso.permiso_id", ondelete="CASCADE"), primary_key=True)
+    concedido = Column(Boolean, nullable=False)
+
+class Areas(Base):
+    __tablename__ = "areas"
+    __table_args__ = (
+        Index("uq_areas_empresa_nombre", "empresa_id", text("lower(nombre)"), unique=True),
+        {"schema": "iso"},
+    )
+
+    area_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = Column(BigInteger, ForeignKey("iso.empresa.empresa_id", ondelete="CASCADE"), nullable=False)
+    nombre = Column(Text, nullable=False)
+    descripcion = Column(Text)
+    activo = Column(Boolean, nullable=False, default=True, server_default="true")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+    usuarios = relationship("Usuario", back_populates="area")
