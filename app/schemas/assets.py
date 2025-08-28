@@ -16,9 +16,8 @@ class ActivoCreate(BaseModel):
     TipoID: int
     EstadoID: int
     ClasificacionID: int
-    EmpresaID: int
-
-    AreaID: Optional[int] = None
+    # EmpresaID: int
+    # AreaID: Optional[int] = None
     Descripcion: Optional[str] = None
     Ubicacion: Optional[str] = None
     FechaAdquisicion: Optional[date] = None
@@ -76,7 +75,6 @@ class ActivoListItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int = Field(alias="activo_id")
-
     Nombre: str = Field(alias="nombre")
     Marca: Optional[str] = Field(default=None, alias="marca")
     Descripcion: Optional[str] = Field(default=None, alias="descripcion")

@@ -12,6 +12,6 @@ pandas
 sqlalchemy
 psycopg2
 alembic>=1.13,<2.0
-passlib
+passlib[bcrypt]>=1.7.4
 dotenv
 starlette

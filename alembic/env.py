@@ -5,13 +5,15 @@ from alembic import context
 import os
 import sys
 from logging.config import fileConfig
-
+from dotenv import load_dotenv
 import app.infrastructure.models  # Importa todos los modelos para que Alembic los detecte
 from app.infrastructure.db import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-
+load_dotenv()
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",

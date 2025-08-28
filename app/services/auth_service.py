@@ -4,15 +4,17 @@ from datetime import timedelta, timezone,datetime
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from app.infrastructure.db import get_db
-from typing import Annotated
+from typing import Annotated, List
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from starlette import status
-from app.infrastructure.models import Usuario
+from app.infrastructure.models import Usuario, Rol, UsuarioRol, Permiso, UsuarioPermiso, RolPermiso, Empresa, Areas
 from app.schemas.Dtos.CreateUserRequest import CreateUserRequest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
+
+from app.schemas.Dtos.UsuarioResponseDto import UsuarioResponseDto
 
 load_dotenv()
 
@@ -32,21 +34,37 @@ def authenticate_user(email:str, password:str,db):
         return False
     return user
 
-def create_access_token(username: str, user_id: int, role: str, expires_delta: timedelta = timedelta(minutes=15)):
-    encode = {"sub": username, "id": user_id, "role": role}
-    expires = datetime.now(timezone.utc) + expires_delta
-    encode.update({"exp": int(expires.timestamp())})
-    return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+def create_access_token(*, payload: dict, expires_delta: timedelta | None = timedelta(minutes=15)) -> str:
+    to_encode = payload.copy()
+    expires = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": int(expires.timestamp())})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def get_current_user(token:Annotated[str, Depends(oauth2_scheme)]):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        user_id: int = payload.get("id")
-        user_role: str = payload.get("role")
-        if username is None or user_id is None:
+        email: str = payload.get("email")
+        user_id: int = payload.get("sub")
+        last_name: str = payload.get("last_name")
+        active: bool = payload.get("activo")
+        empresa_id: int = payload.get("empresa_id")
+        area_id: int = payload.get("area_id")
+        roles: List[str] = payload.get("roles", [])
+        permisos: List[str] = payload.get("permisos", [])
+        if email is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='Could not validate user.')
-        return {'username': username, 'id': user_id, 'user_role': user_role}
+        if not active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Inactive user.')
+        return {
+            'user_id': user_id,
+            'email': email,
+            'last_name': last_name,
+            'empresa_id': empresa_id,
+            'area_id': area_id,
+            'activo': active,
+            'roles': roles,
+            'permisos': permisos
+        }
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
 
@@ -91,3 +109,78 @@ def create_user(db: Session, cr_user: CreateUserRequest) -> Usuario:
 
     db.refresh(user)
     return user
+
+def buscar_usuarios(db: Session, usuario_id: int | None = None):
+    query = (
+        db.query(
+            Usuario.usuario_id,
+            Areas.area_id,
+            Empresa.empresa_id,
+            Usuario.first_name,
+            Usuario.last_name,
+            Usuario.email,
+            Empresa.nombre_legal.label("empresa"),
+            Areas.nombre.label("area")
+        )
+        .join(Empresa, Usuario.empresa_id == Empresa.empresa_id)
+        .join(Areas, Usuario.area_id == Areas.area_id)
+    )
+    if usuario_id is not None:
+        query = query.filter(Usuario.usuario_id == usuario_id)
+    return [dict(row._mapping) for row in query.all()]
+
+def obtener_roles_usuario(db: Session, usuario_id: int) -> list[str]:
+    roles = (
+        db.query(Rol.nombre)
+        .join(UsuarioRol, Rol.rol_id == UsuarioRol.rol_id)
+        .filter(
+            UsuarioRol.usuario_id == usuario_id,
+            Rol.activo.is_(True)
+        )
+        .all()
+    )
+    return [r[0] for r in roles]
+
+def obtener_permisos_usuario(db: Session, usuario_id: int) -> list[str]:
+    permisos = (
+        db.query(Permiso.codigo)
+        .distinct()
+        .join(UsuarioPermiso, Permiso.permiso_id == UsuarioPermiso.permiso_id)
+        .join(UsuarioRol, UsuarioPermiso.usuario_id == UsuarioRol.usuario_id)
+        .join(RolPermiso, UsuarioRol.rol_id == RolPermiso.rol_id)
+        .filter(
+            (UsuarioPermiso.usuario_id == usuario_id) & (UsuarioPermiso.concedido.is_(True)) |
+            (UsuarioRol.usuario_id == usuario_id)
+        )
+        .all()
+    )
+    return [p[0] for p in permisos]
+
+def activate_user(db: Session,user: dict, email: str):
+    ensure_authenticated(user)
+    required_roles = ["Administrador"]
+    ensure_user_roles(user, required_roles)
+
+    user = db.query(Usuario).filter(Usuario.email == email).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if user.activo:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El usuario ya está activo.")
+    user.activo = True
+    db.commit()
+    db.refresh(user)
+    return {"mensaje": "Usuario activado exitosamente."}
+
+def ensure_authenticated(user: dict):
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials"
+        )
+def ensure_user_roles(user: dict, roles: List[str]):
+    if not any(role in roles for role in user.get("roles", [])):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+
