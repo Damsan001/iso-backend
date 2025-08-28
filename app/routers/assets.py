@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -10,6 +10,11 @@ from app.schemas.assets import (
     ActivoCreate, ActivoUpdate,
     ActivoDetailOut, ActivoListItemOut
 )
+from app.services.assets_service import create_asset, list_assets, search_assets, update_asset, delete_asset
+from app.services.auth_service import get_current_user
+
+db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 router = APIRouter(prefix="/assets", tags=["Activos"])
 
@@ -38,96 +43,29 @@ def _ensure_item_belongs_to(db: Session, item_id: Optional[int], catalog_key: st
         raise HTTPException(status_code=400, detail=f"El item {item_id} no pertenece al catálogo '{catalog_key}' o no está disponible para la empresa.")
 
 @router.get("", response_model=List[ActivoListItemOut])
-def listar_activos(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
-    emp = _resolve_empresa_id(request, empresa_id)
-    rows = db.query(Activo).filter(Activo.empresa_id == emp, Activo.deleted_at.is_(None)).order_by(Activo.activo_id.desc()).all()
+def listar_activos(db: db_dependency, user: user_dependency):
+    rows = list_assets(db, user)
     return rows
 
 @router.get("/{activo_id}", response_model=ActivoDetailOut)
-def obtener_activo(activo_id: int, db: Session = Depends(get_db)):
-    row = db.query(Activo).filter(Activo.activo_id == activo_id, Activo.deleted_at.is_(None)).first()
+def obtener_activo(db: db_dependency, user: user_dependency,activo_id: int):
+    row = search_assets(db, user, activo_id)
     if not row:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
-    return row
+    return ActivoDetailOut.model_validate(row)
 
 @router.post("", response_model=ActivoDetailOut)
-def crear_activo(payload: ActivoCreate, request: Request, db: Session = Depends(get_db)):
-    emp = _resolve_empresa_id(request, payload.EmpresaID)
-    _ensure_item_belongs_to(db, payload.TipoID, "tipo_activo", emp)
-    _ensure_item_belongs_to(db, payload.EstadoID, "estado_activo", emp)
-    _ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", emp)
-    _ensure_item_belongs_to(db, payload.AreaID, "area", emp)
+def crear_activo(payload: ActivoCreate, db: db_dependency, user: user_dependency):
+    asset = create_asset(payload, db, user)
+    return asset
 
-    row = Activo(
-        empresa_id=emp,
-        nombre=payload.Nombre.strip(),
-        tipo_item_id=payload.TipoID,
-        estado_item_id=payload.EstadoID,
-        clasificacion_item_id=payload.ClasificacionID,
-        area_item_id=payload.AreaID,
-        descripcion=payload.Descripcion,
-        ubicacion=payload.Ubicacion,
-        fecha_adquisicion=payload.FechaAdquisicion,
-        valor=payload.Valor,
-        numero_serie=payload.NumeroSerie,
-        modelo=payload.Modelo,
-      
-    )
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    return row
 
 @router.patch("/{activo_id}", response_model=ActivoDetailOut)
-def actualizar_activo(activo_id: int, payload: ActivoUpdate, db: Session = Depends(get_db)):
-    row = db.query(Activo).filter(Activo.activo_id == activo_id, Activo.deleted_at.is_(None)).first()
-    if not row:
-        raise HTTPException(status_code=404, detail="Activo no encontrado")
-
-    emp = row.empresa_id
-
-    if payload.TipoID is not None:
-        _ensure_item_belongs_to(db, payload.TipoID, "tipo_activo", emp)
-        row.tipo_item_id = payload.TipoID
-    if payload.EstadoID is not None:
-        _ensure_item_belongs_to(db, payload.EstadoID, "estado_activo", emp)
-        row.estado_item_id = payload.EstadoID
-    if payload.ClasificacionID is not None:
-        _ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", emp)
-        row.clasificacion_item_id = payload.ClasificacionID
-    if payload.AreaID is not None:
-        if payload.AreaID == 0:
-            row.area_item_id = None
-        else:
-            _ensure_item_belongs_to(db, payload.AreaID, "area", emp)
-            row.area_item_id = payload.AreaID
-
-    if payload.Nombre is not None:
-        row.nombre = payload.Nombre.strip()
-    if payload.Descripcion is not None:
-        row.descripcion = payload.Descripcion
-    if payload.Ubicacion is not None:
-        row.ubicacion = payload.Ubicacion
-    if payload.FechaAdquisicion is not None:
-        row.fecha_adquisicion = payload.FechaAdquisicion
-    if payload.Valor is not None:
-        row.valor = payload.Valor
-    if payload.NumeroSerie is not None:
-        row.numero_serie = payload.NumeroSerie
-    if payload.Modelo is not None:
-        row.modelo = payload.Modelo
-
-    db.commit()
-    db.refresh(row)
+def actualizar_activo(db: db_dependency, user: user_dependency,activo_id: int, payload: ActivoUpdate):
+    row = update_asset(db, user,  activo_id, payload)
     return row
 
 @router.delete("/{activo_id}", status_code=204)
 def eliminar_activo(activo_id: int, db: Session = Depends(get_db)):
-    row = db.query(Activo).filter(Activo.activo_id == activo_id, Activo.deleted_at.is_(None)).first()
-    if not row:
-        return
-    # Soft delete
-    from datetime import datetime, timezone
-    row.deleted_at = datetime.now(tz=timezone.utc)
-    db.commit()
+    delete_asset(db,user, activo_id)
     return

@@ -1,13 +1,17 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.infrastructure.db import get_db
-from app.infrastructure.models import Catalog, CatalogItem
+from app.infrastructure.models import Catalog, CatalogItem, Areas
 from app.schemas.assets import CatalogoItemSimple
+from app.services.auth_service import get_current_user
 
+
+db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 router = APIRouter(prefix="/catalogo", tags=["Catálogos de Activos"])
 
 def _resolve_empresa_id(request: Request, q_empresa_id: Optional[int] = None) -> int:
@@ -46,6 +50,12 @@ def catalogo_clasificaciones_activo(request: Request, empresa_id: Optional[int] 
     return _get_catalog_items(db, "clasificacion_activo", emp)
 
 @router.get("/areas", response_model=List[CatalogoItemSimple])
-def catalogo_areas(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
-    emp = _resolve_empresa_id(request, empresa_id)
-    return _get_catalog_items(db, "area", emp)
+def catalogo_areas(db:db_dependency,user: user_dependency):
+    areas = (
+        db.query(Areas.area_id.label("id"), Areas.nombre.label("name"))
+        .filter(Areas.empresa_id == user["empresa_id"])
+        .filter(Areas.deleted_at.is_(None))
+        .order_by(Areas.nombre)
+        .all()
+    )
+    return [CatalogoItemSimple(id=a.id, name=a.name) for a in areas]
