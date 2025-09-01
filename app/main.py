@@ -10,6 +10,7 @@ from app.infrastructure.db import engine
 from app.routers.catalogs import router as catalogs_router
 from app.routers.assets import router as assets_router
 from app.routers.admin import router as admin_router
+from app.users.users_router import router as users_router
 
 app = FastAPI(title="Gestión Documental ISO27001")
 app.add_middleware(
@@ -24,6 +25,7 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix="/auth", tags=["Autenticación"])
 # app.include_router(users_router, prefix="/users", tags=["Usuarios"])
+app.include_router(users_router,  prefix="/users",tags=["Usuarios"])
 app.include_router(documents_router, prefix="/documents", tags=["Documentos"])
 app.include_router(reports_router, prefix="/reports", tags=["Reportes"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
