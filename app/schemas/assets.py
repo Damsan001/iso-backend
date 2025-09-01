@@ -15,7 +15,7 @@ class ActivoCreate(BaseModel):
     Nombre: str = Field(..., min_length=1, max_length=100)
     TipoID: int
     EstadoID: int
-    ClasificacionID: Optional[int] = Field(default=None, alias="clasificacion_id")
+    ClasificacionID: Optional[int] = Field(default=None)
     # EmpresaID: int
     AreaID: Optional[int] = None
     PropietarioID: Optional[int] = None
