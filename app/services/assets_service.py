@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from starlette import status
 
-from app.infrastructure.models import Activo, Catalog, CatalogItem, Areas
+from app.infrastructure.models import Activo, Catalog, CatalogItem, Areas,Usuario
 from sqlalchemy import or_
 from fastapi import HTTPException
 
@@ -33,22 +33,23 @@ def create_asset(payload: ActivoCreate,db: Session, user: dict):
 
     _ensure_item_belongs_to(db, payload.TipoID, "tipo_activo", user["empresa_id"])
     _ensure_item_belongs_to(db, payload.EstadoID, "estado_activo", user["empresa_id"])
-    _ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"])
-
+    #_ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"])
+  
+  
     row = Activo(
         empresa_id=user["empresa_id"],
-        nombre=payload.Nombre.strip(),
+        nombre=payload.Nombre.strip().upper(),
         tipo_item_id=payload.TipoID,
         estado_item_id=payload.EstadoID,
         clasificacion_item_id=payload.ClasificacionID,
-        area_item_id=user["area_id"],
+        area_item_id=payload.AreaID,
         descripcion=payload.Descripcion,
         ubicacion=payload.Ubicacion,
         fecha_adquisicion=payload.FechaAdquisicion,
         valor=payload.Valor,
         numero_serie=payload.NumeroSerie,
         modelo=payload.Modelo,
-        propietario_id=user["user_id"],
+        propietario_id=payload.PropietarioID,
         marca=payload.Marca,
 
     )
@@ -64,7 +65,7 @@ def list_assets(db: Session, user: dict) -> List[Activo]:
 
     rows = db.query(Activo).filter(
         Activo.empresa_id == user["empresa_id"],
-        Activo.area_item_id == user["area_id"],
+       # Activo.area_item_id == user["area_id"],
         Activo.deleted_at.is_(None)
     ).order_by(Activo.activo_id.desc()).all()
     return rows
@@ -76,7 +77,7 @@ def search_assets(db: Session, user: dict, activo_id: int | None = None):
 
     rows = db.query(Activo).filter(
         Activo.empresa_id == user["empresa_id"],
-        Activo.area_item_id == user["area_id"],
+      #  Activo.area_item_id == user["area_id"],
         (Activo.activo_id == activo_id),
         Activo.deleted_at.is_(None)
     ).order_by(Activo.activo_id.desc()).first()
@@ -92,16 +93,21 @@ def update_asset(db: Session, user: dict, activo_id: int, payload:ActivoUpdate) 
         raise HTTPException(status_code=404, detail="Activo no encontrado")
 
 
-
+    if payload.PropietarioID is not None:
+        row.propietario_id = payload.PropietarioID or None
     if payload.TipoID is not None:
         _ensure_item_belongs_to(db, payload.TipoID, "tipo_activo", user["empresa_id"])
         row.tipo_item_id = payload.TipoID
     if payload.EstadoID is not None:
         _ensure_item_belongs_to(db, payload.EstadoID, "estado_activo", user["empresa_id"])
         row.estado_item_id = payload.EstadoID
-    if payload.ClasificacionID is not None:
-        _ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"])
-        row.clasificacion_item_id = payload.ClasificacionID
+    if payload.TipoID in (3,7):
+        if payload.ClasificacionID is not None:
+            _ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"])
+            row.clasificacion_item_id = payload.ClasificacionID
+    else:
+        row.clasificacion_item_id = None
+
     if payload.AreaID is not None:
         if payload.AreaID == 0:
             row.area_item_id = None
@@ -110,7 +116,7 @@ def update_asset(db: Session, user: dict, activo_id: int, payload:ActivoUpdate) 
             row.area_item_id = payload.AreaID
 
     if payload.Nombre is not None:
-        row.nombre = payload.Nombre.strip()
+        row.nombre = payload.Nombre.strip().upper()
     if payload.Descripcion is not None:
         row.descripcion = payload.Descripcion
     if payload.Ubicacion is not None:

@@ -15,9 +15,10 @@ class ActivoCreate(BaseModel):
     Nombre: str = Field(..., min_length=1, max_length=100)
     TipoID: int
     EstadoID: int
-    ClasificacionID: int
+    ClasificacionID: Optional[int] = Field(default=None, alias="clasificacion_id")
     # EmpresaID: int
-    # AreaID: Optional[int] = None
+    AreaID: Optional[int] = None
+    PropietarioID: Optional[int] = None
     Descripcion: Optional[str] = None
     Ubicacion: Optional[str] = None
     FechaAdquisicion: Optional[date] = None
@@ -32,7 +33,7 @@ class ActivoUpdate(BaseModel):
     EstadoID: Optional[int] = None
     ClasificacionID: Optional[int] = None
     AreaID: Optional[int] = None
-
+    PropietarioID: Optional[int] = None
     Descripcion: Optional[str] = None
     Ubicacion: Optional[str] = None
     FechaAdquisicion: Optional[date] = None
@@ -67,6 +68,10 @@ class ActivoOut(BaseModel):
     Estado: Optional[CatalogoItemSimple] = Field(default=None, validation_alias="estado", serialization_alias="Estado")
     Clasificacion: Optional[CatalogoItemSimple] = Field(default=None, validation_alias="clasificacion", serialization_alias="Clasificacion")
     Area: Optional[CatalogoItemSimple] = Field(default=None, validation_alias="area", serialization_alias="Area")
+    PropietarioID: Optional[int] = Field(default=None, alias="propietario_id", serialization_alias="PropietarioID")
+    Propietario: Optional[UsuarioMinOut] = Field(default=None, validation_alias="propietario", serialization_alias="Propietario")
+
+
 
 class ActivoDetailOut(ActivoOut):
     pass
@@ -83,3 +88,11 @@ class ActivoListItemOut(BaseModel):
     Estado: Optional[CatalogoItemSimple] = Field(default=None, validation_alias="estado", serialization_alias="Estado")
     Clasificacion: Optional[CatalogoItemSimple] = Field(default=None, validation_alias="clasificacion", serialization_alias="Clasificacion")
     Area: Optional[CatalogoItemSimple] = Field(default=None, validation_alias="area", serialization_alias="Area")
+    PropietarioID: Optional[int] = Field(default=None, alias="propietario_id", serialization_alias="PropietarioID")
+    Propietario: Optional[UsuarioMinOut] = Field(default=None, validation_alias="propietario", serialization_alias="Propietario")
+
+class UsuarioMinOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    usuario_id: int
+    full_name: str
+    email: str
