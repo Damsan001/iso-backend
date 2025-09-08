@@ -12,16 +12,18 @@ DATABASE_URL = os.getenv(
     "postgresql+psycopg2://admin:admin@localhost:5432/postgres",
 )
 
+SCHEMA = os.getenv("SCHEMA", "iso")
+
 # IMPORTANT: ensure we look first into schema 'iso' and then 'public'
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
     future=True,
-    connect_args={"options": "-csearch_path=iso,public"},
+    connect_args={"options": f"-csearch_path={SCHEMA},public"},
 )
 
 # All tables live in schema iso
-metadata = MetaData(schema="iso")
+metadata = MetaData(schema=SCHEMA)
 Base = declarative_base(metadata=metadata)
 
 # Session factory
