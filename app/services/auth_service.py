@@ -1,4 +1,4 @@
-from fastapi import Depends,HTTPException
+from fastapi import Depends,HTTPException,BackgroundTasks
 import os
 from datetime import timedelta, timezone,datetime
 from fastapi.security import OAuth2PasswordBearer
@@ -14,7 +14,9 @@ from app.schemas.Dtos.CreateUserRequest import CreateUserRequest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 
-from app.schemas.Dtos.UsuarioResponseDto import UsuarioResponseDto
+
+
+from app.utils.send_email import send_email
 
 load_dotenv()
 
@@ -156,6 +158,24 @@ def obtener_permisos_usuario(db: Session, usuario_id: int) -> list[str]:
     )
     return [p[0] for p in permisos]
 
+def reset_password_service(token: str, new_password: str, confirm_password: str, db: Session):
+    print(f"[DEBUG] Token recibido para reset: {token}")  # Log para depuración
+    if new_password != confirm_password:
+        raise HTTPException(status_code=400, detail="Las contraseñas no coinciden")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=400, detail="Token inválido")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Token inválido o expirado")
+    user = db.query(Usuario).filter(Usuario.usuario_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    user.hashed_password = bcrypt_context.hash(new_password)
+    db.commit()
+    return {"mensaje": "Contraseña actualizada correctamente"}
+
 def activate_user(db: Session,user: dict, email: str):
     ensure_authenticated(user)
     required_roles = ["Administrador"]
@@ -184,3 +204,11 @@ def ensure_user_roles(user: dict, roles: List[str]):
             detail="Not enough permissions"
         )
 
+def forgot_password_service(email: str, db: Session, background_tasks: BackgroundTasks, url_site: str):
+    user = db.query(Usuario).filter(Usuario.email == email).first()
+    if not user:
+        return {"mensaje": "Si el correo existe, se enviará un enlace de recuperación."}
+    token = create_access_token(payload={"sub": str(user.usuario_id), "email": user.email}, expires_delta=timedelta(hours=1))
+    reset_url = f"{url_site}/reset-password?data={token}"
+    background_tasks.add_task(send_email, email, reset_url)
+    return {"mensaje": "Si el correo existe, se enviará un enlace de recuperación."}
