@@ -1,0 +1,49 @@
+
+
+POST {{BASE_URL}}/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username={{USER}}&password={{PASSWORD}}
+###
+GET {{BASE_URL}}/admin/roles
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+
+
+###
+GET {{BASE_URL}}/admin/roles/Prueba3
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+
+###
+POST {{BASE_URL}}/admin/roles
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+  "empresa_id": 1,
+  "nombre": "Prueba3",
+  "descripcion": "Prueba de descripcion4",
+  "activo": true
+}
+
+###
+
+PUT {{BASE_URL}}/admin/roles/9
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+  "empresa_id": 1,
+  "nombre": "PruebaModificadaporId2",
+  "descripcion": "Prueba de descripcion3 modificada por id",
+  "activo": true
+
+}
+
+###
+DELETE {{BASE_URL}}/admin/roles/9
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+###

@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import  sessionmaker
+from app.infrastructure.base import Base
 
 load_dotenv()
 
@@ -24,7 +25,7 @@ engine = create_engine(
 
 # All tables live in schema iso
 metadata = MetaData(schema=SCHEMA)
-Base = declarative_base(metadata=metadata)
+
 
 # Session factory
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)

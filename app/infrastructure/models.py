@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import datetime, date
 from sqlalchemy import (
     BigInteger, Boolean, Column, Date, ForeignKey,
-    Numeric, Text,DateTime,Integer,Index, text, String
+    Numeric, Text,DateTime,Integer,Index, text, String, JSON
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .db import Base
+from .base import Base
 
 # --- Generic catalogs (iso.catalog & iso.catalog_item) ---
 class Catalog(Base):
@@ -216,3 +216,16 @@ class Areas(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at = Column(DateTime(timezone=True))
     usuarios = relationship("Usuario", back_populates="area")
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    table_name = Column(String(128), nullable=False)
+    operation = Column(String(16), nullable=False)
+    target_pk_id = Column(Integer, nullable=True, index=True)
+    target_pk = Column(JSON, nullable=False)
+    actor = Column(String(128), nullable=True)
+    before = Column(JSON, nullable=True)
+    after = Column(JSON, nullable=True)
