@@ -11,13 +11,14 @@ from app.routers.catalogs import router as catalogs_router
 from app.routers.assets import router as assets_router
 from app.routers.admin import router as admin_router
 from app.users.users_router import router as users_router
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Gestión Documental ISO27001")
+@asynccontextmanager
+async def lifespan(app):
+    import app.infrastructure.audit
+    yield
+app = FastAPI(title="Gestión Documental ISO27001", lifespan=lifespan)
 
-
-@app.on_event("startup")
-def _register_audit_listeners():
-    import app.infrastructure.audit  # Solo importa, no llames a register_listeners
 
 
 app.add_middleware(

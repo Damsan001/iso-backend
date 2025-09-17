@@ -14,6 +14,7 @@ from app.schemas.Dtos.CreateUserRequest import CreateUserRequest, Token
 from typing import Annotated
 from pydantic import BaseModel
 from passlib.context import CryptContext
+from app.utils.audit_context import audit_context
 from app.services.auth_service import create_user, authenticate_user, create_access_token, get_current_user, \
     buscar_usuarios, obtener_permisos_usuario, obtener_roles_usuario, activate_user, reset_password_service, forgot_password_service
 
