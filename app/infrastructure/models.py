@@ -3,11 +3,20 @@ from __future__ import annotations
 from datetime import datetime, date
 from sqlalchemy import (
     BigInteger, Boolean, Column, Date, ForeignKey,
-    Numeric, Text,DateTime,Integer,Index, text, String
+    Numeric, Text,DateTime,Integer,Index, text, String, JSON, Table
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .db import Base
+from .base import Base
+
+# Tabla intermedia para la relación muchos a muchos entre Usuario y Rol
+usuario_rol = Table(
+    "usuario_rol",
+    Base.metadata,
+    Column("usuario_id", BigInteger, ForeignKey("iso.usuario.usuario_id", ondelete="CASCADE"), primary_key=True),
+    Column("rol_id", BigInteger, ForeignKey("iso.rol.rol_id", ondelete="CASCADE"), primary_key=True),
+    schema="iso"
+)
 
 # --- Generic catalogs (iso.catalog & iso.catalog_item) ---
 class Catalog(Base):
@@ -149,6 +158,12 @@ class Usuario(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at = Column(DateTime(timezone=True))
     area = relationship("Areas", back_populates="usuarios")
+    roles = relationship("Rol", secondary="iso.usuario_rol", back_populates="usuarios")
+    permisos_directos = relationship(
+        "Permiso",
+        secondary="iso.usuario_permiso",
+        back_populates="usuarios_directos"
+    )
 
 class Rol(Base):
     __tablename__ = "rol"
@@ -164,6 +179,8 @@ class Rol(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at = Column(DateTime(timezone=True))
+    usuarios = relationship("Usuario", secondary="iso.usuario_rol", back_populates="roles")
+    permisos = relationship("Permiso", secondary="iso.rol_permiso", backref="roles")
 
 class Permiso(Base):
     __tablename__ = "permiso"
@@ -180,18 +197,17 @@ class Permiso(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at = Column(DateTime(timezone=True))
+    usuarios_directos = relationship(
+        "Usuario",
+        secondary="iso.usuario_permiso",
+        back_populates="permisos_directos"
+    )
 
 class RolPermiso(Base):
     __tablename__ = "rol_permiso"
     __table_args__ = {"schema": "iso"}
     rol_id = Column(BigInteger, ForeignKey("iso.rol.rol_id", ondelete="CASCADE"), primary_key=True)
     permiso_id = Column(BigInteger, ForeignKey("iso.permiso.permiso_id", ondelete="CASCADE"), primary_key=True)
-
-class UsuarioRol(Base):
-    __tablename__ = "usuario_rol"
-    __table_args__ = {"schema": "iso"}
-    usuario_id = Column(BigInteger, ForeignKey("iso.usuario.usuario_id", ondelete="CASCADE"), primary_key=True)
-    rol_id = Column(BigInteger, ForeignKey("iso.rol.rol_id", ondelete="CASCADE"), primary_key=True)
 
 class UsuarioPermiso(Base):
     __tablename__ = "usuario_permiso"
@@ -216,3 +232,17 @@ class Areas(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at = Column(DateTime(timezone=True))
     usuarios = relationship("Usuario", back_populates="area")
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    table_name = Column(String(128), nullable=False)
+    operation = Column(String(16), nullable=False)
+    target_pk_id = Column(Integer, nullable=True, index=True)
+    target_pk = Column(JSON, nullable=False)
+    actor = Column(String(128), nullable=True)
+    before = Column(JSON, nullable=True)
+    after = Column(JSON, nullable=True)
+

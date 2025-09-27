@@ -11,8 +11,16 @@ from app.routers.catalogs import router as catalogs_router
 from app.routers.assets import router as assets_router
 from app.routers.admin import router as admin_router
 from app.users.users_router import router as users_router
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Gestión Documental ISO27001")
+@asynccontextmanager
+async def lifespan(app):
+    import app.infrastructure.audit
+    yield
+app = FastAPI(title="Gestión Documental ISO27001", lifespan=lifespan)
+
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,19 +33,16 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix="/auth", tags=["Autenticación"])
 # app.include_router(users_router, prefix="/users", tags=["Usuarios"])
-app.include_router(users_router,  prefix="/users",tags=["Usuarios"])
+app.include_router(users_router, prefix="/users", tags=["Usuarios"])
 app.include_router(documents_router, prefix="/documents", tags=["Documentos"])
 app.include_router(reports_router, prefix="/reports", tags=["Reportes"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
-
-
 
 # CORS: permitir front local y el header x-company-id
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
-
 
 # Routers con prefijos locales
 # app.include_router(auth_router,      prefix="/auth",      tags=["Autenticación"])
@@ -48,15 +53,18 @@ ALLOWED_ORIGINS = [
 app.include_router(catalogs_router)
 app.include_router(assets_router)
 
+
 @app.get("/", tags=["Health"])
 def root():
     return {"ok": True, "service": "ISO27001 API (clean)"}
+
 
 @app.get("/health/db", tags=["Health"])
 def health_db():
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     return {"db": "ok"}
+
 
 @app.get("/health/dbinfo", tags=["Health"])
 def health_dbinfo():
@@ -65,7 +73,8 @@ def health_dbinfo():
     with engine.connect() as conn:
         meta = conn.execute(text("SELECT current_database(), current_schema(), session_user")).first()
         search_path = conn.execute(text("SHOW search_path")).scalar()
-        exists = conn.execute(text("SELECT to_regclass('iso.catalog'), to_regclass('iso.catalog_item'), to_regclass('iso.activo')")).first()
+        exists = conn.execute(text(
+            "SELECT to_regclass('iso.catalog'), to_regclass('iso.catalog_item'), to_regclass('iso.activo')")).first()
     return {
         "engine_url": safe_url,
         "database": meta[0],
@@ -78,4 +87,3 @@ def health_dbinfo():
             "iso.activo": bool(exists[2]),
         },
     }
-

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from starlette import status
-from app.infrastructure.models import Usuario, Rol, UsuarioRol, Permiso, UsuarioPermiso, RolPermiso, Empresa, Areas
+from app.infrastructure.models import Usuario, Rol, Permiso, UsuarioPermiso, RolPermiso, Empresa, Areas, usuario_rol
 from app.schemas.Dtos.CreateUserRequest import CreateUserRequest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
@@ -134,29 +134,29 @@ def buscar_usuarios(db: Session, usuario_id: int | None = None):
 def obtener_roles_usuario(db: Session, usuario_id: int) -> list[str]:
     roles = (
         db.query(Rol.nombre)
-        .join(UsuarioRol, Rol.rol_id == UsuarioRol.rol_id)
+        .join(usuario_rol, Rol.rol_id == usuario_rol.c.rol_id)
         .filter(
-            UsuarioRol.usuario_id == usuario_id,
+            usuario_rol.c.usuario_id == usuario_id,
             Rol.activo.is_(True)
         )
         .all()
     )
-    return [r[0] for r in roles]
+    return [str(r[0]) for r in roles]
 
 def obtener_permisos_usuario(db: Session, usuario_id: int) -> list[str]:
     permisos = (
         db.query(Permiso.codigo)
         .distinct()
         .join(UsuarioPermiso, Permiso.permiso_id == UsuarioPermiso.permiso_id)
-        .join(UsuarioRol, UsuarioPermiso.usuario_id == UsuarioRol.usuario_id)
-        .join(RolPermiso, UsuarioRol.rol_id == RolPermiso.rol_id)
+        .join(usuario_rol, UsuarioPermiso.usuario_id == usuario_rol.c.usuario_id)
+        .join(RolPermiso, usuario_rol.c.rol_id == RolPermiso.rol_id)
         .filter(
             (UsuarioPermiso.usuario_id == usuario_id) & (UsuarioPermiso.concedido.is_(True)) |
-            (UsuarioRol.usuario_id == usuario_id)
+            (usuario_rol.c.usuario_id == usuario_id)
         )
         .all()
     )
-    return [p[0] for p in permisos]
+    return [str(p[0]) for p in permisos]
 
 def reset_password_service(token: str, new_password: str, confirm_password: str, db: Session):
     print(f"[DEBUG] Token recibido para reset: {token}")  # Log para depuración
@@ -203,6 +203,10 @@ def ensure_user_roles(user: dict, roles: List[str]):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
         )
+
+def check_auth_and_roles(user: dict, required_roles: list[str]):
+    ensure_authenticated(user)
+    ensure_user_roles(user, required_roles)
 
 def forgot_password_service(email: str, db: Session, background_tasks: BackgroundTasks, url_site: str):
     user = db.query(Usuario).filter(Usuario.email == email).first()
