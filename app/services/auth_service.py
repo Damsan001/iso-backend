@@ -94,7 +94,7 @@ def create_user(db: Session, cr_user: CreateUserRequest) -> Usuario:
         first_name=cr_user.first_name,
         last_name=cr_user.last_name,
         email=email_norm,
-        hashed_password=bcrypt_context.hash(cr_user.password),
+        hashed_password=bcrypt_context.hash(cr_user.password[:72]),
         activo=False,
     )
 
@@ -172,7 +172,7 @@ def reset_password_service(token: str, new_password: str, confirm_password: str,
     user = db.query(Usuario).filter(Usuario.usuario_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    user.hashed_password = bcrypt_context.hash(new_password)
+    user.hashed_password = bcrypt_context.hash(new_password[:72])
     db.commit()
     return {"mensaje": "Contraseña actualizada correctamente"}
 
