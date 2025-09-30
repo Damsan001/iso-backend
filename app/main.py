@@ -21,12 +21,18 @@ app = FastAPI(title="Gestión Documental ISO27001", lifespan=lifespan)
 
 
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://appiso.insaight.com.mx",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Content-Type", "Authorization", "x-company-id"],  # <- clave
+    allow_headers=["Content-Type", "Authorization", "x-company-id"],
     expose_headers=["*"],
     max_age=600,
 )
@@ -38,11 +44,7 @@ app.include_router(documents_router, prefix="/documents", tags=["Documentos"])
 app.include_router(reports_router, prefix="/reports", tags=["Reportes"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 
-# CORS: permitir front local y el header x-company-id
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+
 
 # Routers con prefijos locales
 # app.include_router(auth_router,      prefix="/auth",      tags=["Autenticación"])
