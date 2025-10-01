@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from app.schemas.assets import ActivoCreate, ActivoUpdate
 from app.services.auth_service import ensure_authenticated, ensure_user_roles
+import os
 
 
 def _ensure_item_belongs_to(db: Session, item_id: Optional[int], catalog_key: str, empresa_id: int) -> None:
@@ -27,6 +28,7 @@ def _ensure_item_belongs_to(db: Session, item_id: Optional[int], catalog_key: st
         raise HTTPException(status_code=400, detail=f"El item {item_id} no pertenece al catálogo '{catalog_key}' o no está disponible para la empresa.")
 
 def create_asset(payload: ActivoCreate,db: Session, user: dict):
+    squema = os.getenv("DB_SCHEMA")
     ensure_authenticated(user)
     required_roles = ["Administrador", "Supervisor"]
     ensure_user_roles(user, required_roles)
