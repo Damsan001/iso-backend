@@ -2,6 +2,7 @@ from sqlalchemy import inspect, event
 from sqlalchemy.orm import Session
 from app.infrastructure.models import AuditLog
 from app.infrastructure.audit_vars import current_actor  # <- usa la ContextVar compartida
+from app.utils.decimal_utils import convert_decimal
 
 @event.listens_for(Session, "before_flush")
 def audit_before_flush(session: Session, flush_context, instances):
@@ -43,10 +44,10 @@ def audit_before_flush(session: Session, flush_context, instances):
             table_name=inspect(obj).mapper.local_table.name,
             operation="CREATE",
             target_pk_id=_pk_value(obj),
-            target_pk=_pk_dict(obj),
+            target_pk=convert_decimal(_pk_dict(obj)),
             actor=str(actor) if actor is not None else None,
             before=None,
-            after=_serialize_instance(obj),
+            after=convert_decimal(_serialize_instance(obj)),
         ))
 
     for obj in list(session.dirty):
@@ -59,13 +60,13 @@ def audit_before_flush(session: Session, flush_context, instances):
         if not before and not after:
             continue
         session.add(AuditLog(
-            table_name=state.mapper.local_table.name,
+            table_name=inspect(obj).mapper.local_table.name,
             operation="UPDATE",
             target_pk_id=_pk_value(obj),
-            target_pk=_pk_dict(obj),
+            target_pk=convert_decimal(_pk_dict(obj)),
             actor=str(actor) if actor is not None else None,
-            before=before,
-            after=after,
+            before=convert_decimal(before),
+            after=convert_decimal(after),
         ))
 
     for obj in list(session.deleted):
