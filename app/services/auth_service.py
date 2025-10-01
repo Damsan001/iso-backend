@@ -28,13 +28,21 @@ ALGORITHM = os.getenv("ALGORITHM")
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
-def authenticate_user(email:str, password:str,db):
+def _truncate_password(password: str) -> str:
+
+    password_bytes = password.encode('utf-8')[:72]
+    return password_bytes.decode('utf-8', errors='ignore')
+
+
+def authenticate_user(email: str, password: str, db):
     user = db.query(Usuario).filter(Usuario.email == email).first()
     if not user:
         return False
+    password = _truncate_password(password)
     if not bcrypt_context.verify(password, user.hashed_password):
         return False
     return user
+
 
 def create_access_token(*, payload: dict, expires_delta: timedelta | None = timedelta(minutes=15)) -> str:
     to_encode = payload.copy()
@@ -73,7 +81,7 @@ def get_current_user(token:Annotated[str, Depends(oauth2_scheme)]):
 def create_user(db: Session, cr_user: CreateUserRequest) -> Usuario:
     email_norm: str = str(cr_user.email).strip().lower()
 
-    # Verificación de unicidad por empresa (case-insensitive)
+
     exists = (
         db.query(Usuario)
         .filter(
@@ -88,13 +96,14 @@ def create_user(db: Session, cr_user: CreateUserRequest) -> Usuario:
             detail="El correo ya está registrado para esta empresa.",
         )
 
+    hashed_password = bcrypt_context.hash(_truncate_password(cr_user.password))
     user = Usuario(
         empresa_id=cr_user.empresa_id,
         area_id=cr_user.area_id,
         first_name=cr_user.first_name,
         last_name=cr_user.last_name,
         email=email_norm,
-        hashed_password=bcrypt_context.hash(cr_user.password[:72]),
+        hashed_password=hashed_password,
         activo=False,
     )
 
@@ -172,7 +181,7 @@ def reset_password_service(token: str, new_password: str, confirm_password: str,
     user = db.query(Usuario).filter(Usuario.usuario_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    user.hashed_password = bcrypt_context.hash(new_password[:72])
+    user.hashed_password = bcrypt_context.hash(_truncate_password(new_password))
     db.commit()
     return {"mensaje": "Contraseña actualizada correctamente"}
 
