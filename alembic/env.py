@@ -12,6 +12,8 @@ from app.infrastructure.base import Base
 config = context.config
 load_dotenv()
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+SCHEMA = os.getenv("DB_SCHEMA", "iso")
+print(f"[Alembic] Usando esquema: {SCHEMA}")
 config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",

@@ -10,7 +10,8 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+import os
+SCHEMA = os.getenv("DB_SCHEMA", "iso")
 
 # revision identifiers, used by Alembic.
 revision: str = '09773d91d02d'
@@ -22,6 +23,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     # Solo tabla audit_log
+    print(f"[Alembic] Usando esquema migracion iso : {SCHEMA}")
     op.create_table(
         'audit_log',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -34,15 +36,24 @@ def upgrade() -> None:
         sa.Column('before', sa.JSON(), nullable=True),
         sa.Column('after', sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
-        schema='iso'
+        schema=SCHEMA
     )
-    op.create_index(op.f('ix_iso_audit_log_id'), 'audit_log', ['id'], unique=False, schema='iso')
-    op.create_index(op.f('ix_iso_audit_log_target_pk_id'), 'audit_log', ['target_pk_id'], unique=False, schema='iso')
+    op.create_index(op.f('ix_iso_audit_log_id'), 'audit_log', ['id'], unique=False, schema=SCHEMA)
+    op.create_index(op.f('ix_iso_audit_log_target_pk_id'), 'audit_log', ['target_pk_id'], unique=False, schema=SCHEMA)
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # Solo revertir audit_log
-    op.drop_index(op.f('ix_iso_audit_log_target_pk_id'), table_name='audit_log', schema='iso')
-    op.drop_index(op.f('ix_iso_audit_log_id'), table_name='audit_log', schema='iso')
-    op.drop_table('audit_log', schema='iso')
+    try:
+        op.drop_index(op.f('ix_iso_audit_log_target_pk_id'), table_name='audit_log', schema=SCHEMA)
+    except Exception as e:
+        print(f"Índice ix_iso_audit_log_target_pk_id no existe o ya fue eliminado: {e}")
+    try:
+        op.drop_index(op.f('ix_iso_audit_log_id'), table_name='audit_log', schema=SCHEMA)
+    except Exception as e:
+        print(f"Índice ix_iso_audit_log_id no existe o ya fue eliminado: {e}")
+    try:
+        op.drop_table('audit_log', schema=SCHEMA)
+    except Exception as e:
+        print(f"Tabla audit_log no existe o ya fue eliminada: {e}")

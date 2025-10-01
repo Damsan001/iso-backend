@@ -9,7 +9,8 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+import os
+SCHEMA = os.getenv("DB_SCHEMA", "iso")
 
 # revision identifiers, used by Alembic.
 revision: str = 'f42722ced9a2'
@@ -31,7 +32,7 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('catalog_id'),
     sa.UniqueConstraint('catalog_key'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('empresa',
     sa.Column('empresa_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -43,7 +44,7 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('empresa_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('areas',
     sa.Column('area_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -56,7 +57,7 @@ def upgrade() -> None:
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('area_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_index('uq_areas_empresa_nombre', 'areas', ['empresa_id', sa.literal_column('lower(nombre)')], unique=True, schema='iso')
     op.create_table('catalog_item',
@@ -76,7 +77,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ),
     sa.ForeignKeyConstraint(['parent_item_id'], ['iso.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('item_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('permiso',
     sa.Column('permiso_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -90,9 +91,9 @@ def upgrade() -> None:
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('permiso_id'),
-    schema='iso'
+    schema=SCHEMA
     )
-    op.create_index('uq_permiso_scope', 'permiso', ['empresa_id', sa.literal_column('upper(codigo)')], unique=True, schema='iso')
+    op.create_index('uq_permiso_scope', 'permiso', ['empresa_id', sa.literal_column('upper(codigo)')], unique=True, schema=SCHEMA)
     op.create_table('rol',
     sa.Column('rol_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('empresa_id', sa.BigInteger(), nullable=False),
@@ -104,16 +105,16 @@ def upgrade() -> None:
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('rol_id'),
-    schema='iso'
+    schema=SCHEMA
     )
-    op.create_index('uq_rol_empresa_nombre', 'rol', ['empresa_id', sa.literal_column('lower(nombre)')], unique=True, schema='iso')
+    op.create_index('uq_rol_empresa_nombre', 'rol', ['empresa_id', sa.literal_column('lower(nombre)')], unique=True, schema=SCHEMA)
     op.create_table('rol_permiso',
     sa.Column('rol_id', sa.BigInteger(), nullable=False),
     sa.Column('permiso_id', sa.BigInteger(), nullable=False),
     sa.ForeignKeyConstraint(['permiso_id'], ['iso.permiso.permiso_id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['rol_id'], ['iso.rol.rol_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('rol_id', 'permiso_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('usuario',
     sa.Column('usuario_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -127,12 +128,12 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['area_id'], ['iso.areas.area_id'], ondelete='RESTRICT'),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['area_id'], [f'{SCHEMA}.areas.area_id'], ondelete='RESTRICT'),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('usuario_id'),
-    schema='iso'
+    schema=SCHEMA
     )
-    op.create_index('uq_usuario_empresa_email', 'usuario', ['empresa_id', sa.literal_column('lower(email)')], unique=True, schema='iso')
+    op.create_index('uq_usuario_empresa_email', 'usuario', ['empresa_id', sa.literal_column('lower(email)')], unique=True, schema=SCHEMA)
     op.create_table('activo',
     sa.Column('activo_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('empresa_id', sa.BigInteger(), nullable=False),
@@ -162,7 +163,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['propietario_id'], ['iso.usuario.usuario_id'], ),
     sa.ForeignKeyConstraint(['tipo_item_id'], ['iso.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('activo_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('documento',
     sa.Column('documento_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -183,7 +184,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ),
     sa.ForeignKeyConstraint(['tipo_item_id'], ['iso.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('documento_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('usuario_permiso',
     sa.Column('usuario_id', sa.BigInteger(), nullable=False),
@@ -192,7 +193,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['permiso_id'], ['iso.permiso.permiso_id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['usuario_id'], ['iso.usuario.usuario_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('usuario_id', 'permiso_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('usuario_rol',
     sa.Column('usuario_id', sa.BigInteger(), nullable=False),
@@ -200,7 +201,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['rol_id'], ['iso.rol.rol_id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['usuario_id'], ['iso.usuario.usuario_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('usuario_id', 'rol_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('documento_acl',
     sa.Column('acl_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -218,7 +219,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['permiso_item_id'], ['iso.catalog_item.item_id'], ),
     sa.ForeignKeyConstraint(['rol_item_id'], ['iso.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('acl_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('documento_version',
     sa.Column('version_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -238,7 +239,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['documento_id'], ['iso.documento.documento_id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['estado_item_id'], ['iso.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('version_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     op.create_table('comentario_revision',
     sa.Column('comentario_id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -253,7 +254,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['usuario_id'], ['iso.usuario.usuario_id'], ),
     sa.ForeignKeyConstraint(['version_id'], ['iso.documento_version.version_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('comentario_id'),
-    schema='iso'
+    schema=SCHEMA
     )
     # ### end Alembic commands ###
 
@@ -261,23 +262,23 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('comentario_revision', schema='iso')
-    op.drop_table('documento_version', schema='iso')
-    op.drop_table('documento_acl', schema='iso')
-    op.drop_table('usuario_rol', schema='iso')
-    op.drop_table('usuario_permiso', schema='iso')
-    op.drop_table('documento', schema='iso')
-    op.drop_table('activo', schema='iso')
-    op.drop_index('uq_usuario_empresa_email', table_name='usuario', schema='iso')
-    op.drop_table('usuario', schema='iso')
-    op.drop_table('rol_permiso', schema='iso')
-    op.drop_index('uq_rol_empresa_nombre', table_name='rol', schema='iso')
-    op.drop_table('rol', schema='iso')
-    op.drop_index('uq_permiso_scope', table_name='permiso', schema='iso')
-    op.drop_table('permiso', schema='iso')
-    op.drop_table('catalog_item', schema='iso')
-    op.drop_index('uq_areas_empresa_nombre', table_name='areas', schema='iso')
-    op.drop_table('areas', schema='iso')
-    op.drop_table('empresa', schema='iso')
-    op.drop_table('catalog', schema='iso')
+    op.drop_table('comentario_revision', schema=SCHEMA)
+    op.drop_table('documento_version', schema=SCHEMA)
+    op.drop_table('documento_acl', schema=SCHEMA)
+    op.drop_table('usuario_rol', schema=SCHEMA)
+    op.drop_table('usuario_permiso', schema=SCHEMA)
+    op.drop_table('documento', schema=SCHEMA)
+    op.drop_table('activo', schema=SCHEMA)
+    op.drop_index('uq_usuario_empresa_email', table_name='usuario', schema=SCHEMA)
+    op.drop_table('usuario', schema=SCHEMA)
+    op.drop_table('rol_permiso', schema=SCHEMA)
+    op.drop_index('uq_rol_empresa_nombre', table_name='rol', schema=SCHEMA)
+    op.drop_table('rol', schema=SCHEMA)
+    op.drop_index('uq_permiso_scope', table_name='permiso', schema=SCHEMA)
+    op.drop_table('permiso', schema=SCHEMA)
+    op.drop_table('catalog_item', schema=SCHEMA)
+    op.drop_index('uq_areas_empresa_nombre', table_name='areas', schema=SCHEMA)
+    op.drop_table('areas', schema=SCHEMA)
+    op.drop_table('empresa', schema=SCHEMA)
+    op.drop_table('catalog', schema=SCHEMA)
     # ### end Alembic commands ###

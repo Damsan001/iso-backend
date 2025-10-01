@@ -13,7 +13,7 @@ DATABASE_URL = os.getenv(
     "postgresql+psycopg2://admin:admin@localhost:5432/postgres",
 )
 
-SCHEMA = os.getenv("SCHEMA", "iso")
+SCHEMA = os.getenv("DB_SCHEMA", "iso")
 
 # IMPORTANT: ensure we look first into schema 'iso' and then 'public'
 engine = create_engine(
@@ -31,6 +31,7 @@ metadata = MetaData(schema=SCHEMA)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
 
 def get_db():
+
     db = SessionLocal()
     try:
         yield db
