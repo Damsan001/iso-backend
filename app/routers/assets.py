@@ -8,13 +8,15 @@ from sqlalchemy import or_
 from app.infrastructure.db import get_db
 from app.infrastructure.models import Activo, Catalog, CatalogItem, Usuario
 from app.schemas.assets import (
-    ActivoCreate, ActivoUpdate, ActivoDetailOut, ActivoListItemOut,
-    UsuarioMinOut,   # <-- importa el DTO para el combo
+    ActivoCreate, ActivoUpdate, ActivoDetailOut, ActivoListItemOut,ActivoListPage,
+    UsuarioMinOut, # <-- importa el DTO para el combo
 )
 from app.services.assets_service import (
-    create_asset, list_assets, search_assets, update_asset, delete_asset
+    create_asset, list_assets, search_assets, update_asset, delete_asset,list_assets_paged
 )
 from app.services.auth_service import get_current_user
+
+from fastapi import Query
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
@@ -67,9 +69,18 @@ def listar_usuarios_para_activos(
 
 
 # --- Rutas de activos (deja estas igual; están bajo /assets) ---
-@router.get("", response_model=List[ActivoListItemOut])
-def listar_activos(db: db_dependency, user: user_dependency):
-    return list_assets(db, user)
+@router.get("", response_model=ActivoListPage)
+def listar_activos(
+    db: db_dependency,
+    user: user_dependency,
+    q: Optional[str] = Query(None, description="Texto de búsqueda"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=200),
+):
+    offset = (page - 1) * page_size
+    items, total = list_assets_paged(db, user, q, page_size, offset)
+    # FastAPI serializa ORM->DTO gracias a from_attributes
+    return {"items": items, "total": total}
 
 @router.get("/{activo_id}", response_model=ActivoDetailOut)
 def obtener_activo(db: db_dependency, user: user_dependency, activo_id: int):

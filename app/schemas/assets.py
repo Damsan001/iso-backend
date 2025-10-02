@@ -102,3 +102,9 @@ class UsuarioMinOut(BaseModel):
     usuario_id: int
     full_name: str
     email: str
+    
+from typing import List  # si no está ya importado arriba
+
+class ActivoListPage(BaseModel):
+    items: List[ActivoListItemOut]
+    total: int

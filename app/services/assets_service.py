@@ -3,12 +3,14 @@ from sqlalchemy.orm import Session
 from starlette import status
 
 from app.infrastructure.models import Activo, Catalog, CatalogItem, Areas,Usuario
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from fastapi import HTTPException
 
 from app.schemas.assets import ActivoCreate, ActivoUpdate
 from app.services.auth_service import ensure_authenticated, ensure_user_roles
 import os
+from typing import Optional, Tuple
+
 
 
 def _ensure_item_belongs_to(db: Session, item_id: Optional[int], catalog_key: str, empresa_id: int) -> None:
@@ -160,3 +162,46 @@ def delete_asset(db: Session,user:dict, activo_id: int) -> None:
     from datetime import datetime, timezone
     row.deleted_at = datetime.now(tz=timezone.utc)
     db.commit()
+    
+
+def list_assets_paged(
+    db: Session,
+    user: dict,
+    q: Optional[str] = None,
+    limit: int = 25,
+    offset: int = 0,
+) -> Tuple[list[Activo], int]:
+    """Lista paginada de activos con filtro por texto. Devuelve (items, total)."""
+    base = (
+        db.query(Activo)
+        .filter(
+            Activo.empresa_id == user["empresa_id"],
+            Activo.deleted_at.is_(None),
+        )
+    )
+
+    if q:
+        like = f"%{q.strip()}%"
+        base = base.filter(
+            or_(
+                Activo.nombre.ilike(like),
+                Activo.descripcion.ilike(like),
+                Activo.ubicacion.ilike(like),
+                Activo.marca.ilike(like),
+            )
+        )
+
+    # total antes de paginar
+    total = base.count()
+
+    # página
+    lim = max(1, min(200, int(limit)))
+    off = max(0, int(offset))
+
+    items = (
+        base.order_by(Activo.activo_id.desc())
+        .limit(lim)
+        .offset(off)
+        .all()
+    )
+    return items, total
