@@ -91,6 +91,12 @@ class ActivoListItemOut(BaseModel):
     PropietarioID: Optional[int] = Field(default=None, alias="propietario_id", serialization_alias="PropietarioID")
     Propietario: Optional[UsuarioMinOut] = Field(default=None, validation_alias="propietario", serialization_alias="Propietario")
 
+    TipoID: Optional[int] = Field(default=None, alias="tipo_item_id")
+    EstadoID: Optional[int] = Field(default=None, alias="estado_item_id")
+    ClasificacionID: Optional[int] = Field(default=None, alias="clasificacion_item_id")
+    AreaID: Optional[int] = Field(default=None, alias="area_item_id")
+    PropietarioID: Optional[int] = Field(default=None, alias="propietario_id")
+
 class UsuarioMinOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     usuario_id: int
