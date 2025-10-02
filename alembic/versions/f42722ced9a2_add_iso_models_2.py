@@ -17,7 +17,7 @@ revision: str = 'f42722ced9a2'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
-
+print(SCHEMA)
 
 def upgrade() -> None:
     """Upgrade schema."""
@@ -55,11 +55,11 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('area_id'),
     schema=SCHEMA
     )
-    op.create_index('uq_areas_empresa_nombre', 'areas', ['empresa_id', sa.literal_column('lower(nombre)')], unique=True, schema='iso')
+    op.create_index('uq_areas_empresa_nombre', 'areas', ['empresa_id', sa.literal_column('lower(nombre)')], unique=True, schema=SCHEMA)
     op.create_table('catalog_item',
     sa.Column('item_id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('catalog_id', sa.BigInteger(), nullable=False),
@@ -73,9 +73,9 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['catalog_id'], ['iso.catalog.catalog_id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ),
-    sa.ForeignKeyConstraint(['parent_item_id'], ['iso.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['catalog_id'], [f'{SCHEMA}.catalog.catalog_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ),
+    sa.ForeignKeyConstraint(['parent_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('item_id'),
     schema=SCHEMA
     )
@@ -89,7 +89,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('permiso_id'),
     schema=SCHEMA
     )
@@ -103,7 +103,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('rol_id'),
     schema=SCHEMA
     )
@@ -111,8 +111,8 @@ def upgrade() -> None:
     op.create_table('rol_permiso',
     sa.Column('rol_id', sa.BigInteger(), nullable=False),
     sa.Column('permiso_id', sa.BigInteger(), nullable=False),
-    sa.ForeignKeyConstraint(['permiso_id'], ['iso.permiso.permiso_id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['rol_id'], ['iso.rol.rol_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['permiso_id'], [f'{SCHEMA}.permiso.permiso_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['rol_id'], [f'{SCHEMA}.rol.rol_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('rol_id', 'permiso_id'),
     schema=SCHEMA
     )
@@ -155,13 +155,13 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('area_item_id', sa.BigInteger(), nullable=True),
-    sa.ForeignKeyConstraint(['area_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['clasificacion_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['custodio_id'], ['iso.usuario.usuario_id'], ),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ),
-    sa.ForeignKeyConstraint(['estado_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['propietario_id'], ['iso.usuario.usuario_id'], ),
-    sa.ForeignKeyConstraint(['tipo_item_id'], ['iso.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['area_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['clasificacion_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['custodio_id'], [f'{SCHEMA}.usuario.usuario_id'], ),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ),
+    sa.ForeignKeyConstraint(['estado_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['propietario_id'], [f'{SCHEMA}.usuario.usuario_id'], ),
+    sa.ForeignKeyConstraint(['tipo_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('activo_id'),
     schema=SCHEMA
     )
@@ -178,11 +178,11 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['area_responsable_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['clasificacion_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['creador_id'], ['iso.usuario.usuario_id'], ),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ),
-    sa.ForeignKeyConstraint(['tipo_item_id'], ['iso.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['area_responsable_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['clasificacion_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['creador_id'], [f'{SCHEMA}.usuario.usuario_id'], ),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ),
+    sa.ForeignKeyConstraint(['tipo_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('documento_id'),
     schema=SCHEMA
     )
@@ -190,16 +190,16 @@ def upgrade() -> None:
     sa.Column('usuario_id', sa.BigInteger(), nullable=False),
     sa.Column('permiso_id', sa.BigInteger(), nullable=False),
     sa.Column('concedido', sa.Boolean(), nullable=False),
-    sa.ForeignKeyConstraint(['permiso_id'], ['iso.permiso.permiso_id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['usuario_id'], ['iso.usuario.usuario_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['permiso_id'], [f'{SCHEMA}.permiso.permiso_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['usuario_id'], [f'{SCHEMA}.usuario.usuario_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('usuario_id', 'permiso_id'),
     schema=SCHEMA
     )
     op.create_table('usuario_rol',
     sa.Column('usuario_id', sa.BigInteger(), nullable=False),
     sa.Column('rol_id', sa.BigInteger(), nullable=False),
-    sa.ForeignKeyConstraint(['rol_id'], ['iso.rol.rol_id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['usuario_id'], ['iso.usuario.usuario_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['rol_id'], [f'{SCHEMA}.rol.rol_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['usuario_id'], [f'{SCHEMA}.usuario.usuario_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('usuario_id', 'rol_id'),
     schema=SCHEMA
     )
@@ -213,11 +213,11 @@ def upgrade() -> None:
     sa.Column('nivel', sa.Integer(), server_default='0', nullable=False),
     sa.Column('creado_en', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['area_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['documento_id'], ['iso.documento.documento_id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['empresa_id'], ['iso.empresa.empresa_id'], ),
-    sa.ForeignKeyConstraint(['permiso_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['rol_item_id'], ['iso.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['area_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['documento_id'], [f'{SCHEMA}.documento.documento_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['empresa_id'], [f'{SCHEMA}.empresa.empresa_id'], ),
+    sa.ForeignKeyConstraint(['permiso_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['rol_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('acl_id'),
     schema=SCHEMA
     )
@@ -234,10 +234,10 @@ def upgrade() -> None:
     sa.Column('aprobado_por_id', sa.BigInteger(), nullable=True),
     sa.Column('fecha_autorizacion', sa.DateTime(timezone=True), nullable=True),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['aprobado_por_id'], ['iso.usuario.usuario_id'], ),
-    sa.ForeignKeyConstraint(['creado_por_id'], ['iso.usuario.usuario_id'], ),
-    sa.ForeignKeyConstraint(['documento_id'], ['iso.documento.documento_id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['estado_item_id'], ['iso.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['aprobado_por_id'], [f'{SCHEMA}.usuario.usuario_id'], ),
+    sa.ForeignKeyConstraint(['creado_por_id'], [f'{SCHEMA}.usuario.usuario_id'], ),
+    sa.ForeignKeyConstraint(['documento_id'], [f'{SCHEMA}.documento.documento_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['estado_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
     sa.PrimaryKeyConstraint('version_id'),
     schema=SCHEMA
     )
@@ -250,9 +250,9 @@ def upgrade() -> None:
     sa.Column('fecha', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('estatus_item_id', sa.BigInteger(), nullable=True),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['estatus_item_id'], ['iso.catalog_item.item_id'], ),
-    sa.ForeignKeyConstraint(['usuario_id'], ['iso.usuario.usuario_id'], ),
-    sa.ForeignKeyConstraint(['version_id'], ['iso.documento_version.version_id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['estatus_item_id'], [f'{SCHEMA}.catalog_item.item_id'], ),
+    sa.ForeignKeyConstraint(['usuario_id'], [f'{SCHEMA}.usuario.usuario_id'], ),
+    sa.ForeignKeyConstraint(['version_id'], [f'{SCHEMA}.documento_version.version_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('comentario_id'),
     schema=SCHEMA
     )
