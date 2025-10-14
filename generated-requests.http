@@ -1,0 +1,176 @@
+
+
+POST {{BASE_URL}}/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username={{USER}}&password={{PASSWORD}}
+
+
+###
+GET {{BASE_URL}}/admin/roles
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+###
+GET {{BASE_URL}}/admin/roles/user/2
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+
+
+###
+GET {{BASE_URL}}/admin/roles/Pru
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+
+###
+
+GET {{BASE_URL}}/admin/roles/1/permisos
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+
+###
+POST {{BASE_URL}}/admin/roles
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+  "empresa_id": 1,
+  "nombre": "Prueba4",
+  "descripcion": "Prueba de descripcion4",
+  "activo": true
+}
+
+###
+
+PUT {{BASE_URL}}/admin/roles/10
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+  "empresa_id": 1,
+  "nombre": "PruebaModificadaporId3",
+  "descripcion": "Prueba de descripcion3 modificada por id",
+  "activo": true
+
+}
+###
+PATCH {{BASE_URL}}/admin/roles/10
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+
+  "nombre": "PruebaModificadaporId3Patch"
+
+
+}
+
+###
+DELETE {{BASE_URL}}/admin/roles/9
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+###
+
+POST {{BASE_URL}}/admin/roles/assign/2
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+[
+11
+]
+###
+POST {{BASE_URL}}/admin/roles/unassign/1
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+[
+11
+]
+
+###
+
+
+
+###
+GET {{BASE_URL}}/admin/permisos
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+###
+
+###
+GET {{BASE_URL}}/admin/permisos/Empresa
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+###
+POST {{BASE_URL}}/admin/permisos
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+  "empresa_id": 1,
+  "codigo": "PRUEBA4",
+  "nombre": "Prueba4",
+  "descripcion": "Prueba de descripcion4",
+  "activo": true
+}
+###
+PUT {{BASE_URL}}/admin/permisos/7
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+  "empresa_id": 1,
+  "codigo": "PruebaModificadaporId3",
+  "nombre": "PruebaModificadaporId3nombre",
+  "descripcion": "Prueba de descripcion3 modificada por id",
+  "activo": false
+
+}
+###
+PATCH {{BASE_URL}}/admin/permisos/
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+
+  "nombre": "PruebaModificadaporId3Patch"
+
+
+}
+###
+DELETE {{BASE_URL}}/admin/permisos/6
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+###
+POST {{BASE_URL}}/admin/permisos/assign/1
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+[5]
+###
+POST {{BASE_URL}}/admin/permisos/unassign/1
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+[5]
+###
+GET {{BASE_URL}}/admin/permisos/2/permiso
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+###
+
+###
+POST {{BASE_URL}}/admin/permisos/assign/role/1
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+[5]
+###
+
+###
+POST {{BASE_URL}}/admin/permisos/unassign/role/1
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+[5]
+###

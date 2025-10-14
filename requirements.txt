@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+pytest         
+httpx  
+python-multipart
+bcrypt==3.2.0
+python-jose
+pydantic[email]
+openpyxl
+pandas
+sqlalchemy
+psycopg2
+alembic>=1.13,<2.0
+passlib==1.7.4
+dotenv
+starlette
