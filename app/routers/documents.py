@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.infrastructure.db import get_db
-from app.schemas.Dtos.DocumentDtos import DocumentCreateDto
+from app.schemas.Dtos.DocumentDtos import DocumentCreateDto, DocumentVesionDto
 from app.schemas.document import (
     DocumentCreate, Document,
     TypeOfDocument, Classification
@@ -15,7 +15,8 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from app.schemas.version import VersionCreate, VersionInfo
 from app.services.auth_service import get_current_user
-from app.services.document_google_service import create_documents_service, get_documents_service
+from app.services.document_google_service import create_documents_service, get_documents_service, view_document_service, \
+    create_document_version_service
 from app.services.document_service import DocumentService
 from app.infrastructure.version_repository import VersionRepository
 from app.utils.audit_context import audit_context
@@ -53,3 +54,27 @@ async def create_document(
 def get_documents(db: db_dependency):
     documents = get_documents_service(db)
     return documents
+
+#Obtener el documento por el id
+@router.get("/view/{version_id}", response_model=str)
+def view_document(db: db_dependency, version_id: int):
+    return view_document_service(db, version_id)
+
+@router.post("/versions/{code}", response_model=str)
+async def create_document_version(
+    code: str,
+    db: db_dependency,
+    user: user_dependency,
+    author: str = Form(...),
+    reviewer: str = Form(...),
+    approver: str = Form(...),
+    file: UploadFile = File(...)
+):
+    document = DocumentVesionDto(
+
+        creador_id=author,
+        revisado_por_id=reviewer,
+        aprobador_por_id=approver,
+
+    )
+    return create_document_version_service(db, user, code, document, file)

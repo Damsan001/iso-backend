@@ -11,3 +11,11 @@ class DocumentCreateDto(BaseModel):
     clasificacion_item_id:int
 
     model_config = {'from_attributes': True}
+
+class DocumentVesionDto(BaseModel):
+
+    creador_id:int
+    revisado_por_id:int
+    aprobador_por_id:int
+
+    model_config = {'from_attributes': True}
