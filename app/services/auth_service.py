@@ -16,7 +16,7 @@ from sqlalchemy import func
 
 
 
-from app.utils.send_email import send_email
+from app.utils.send_email import send_email_password
 
 load_dotenv()
 
@@ -223,5 +223,5 @@ def forgot_password_service(email: str, db: Session, background_tasks: Backgroun
         return {"mensaje": "Si el correo existe, se enviará un enlace de recuperación."}
     token = create_access_token(payload={"sub": str(user.usuario_id), "email": user.email}, expires_delta=timedelta(hours=1))
     reset_url = f"{url_site}/reset-password?data={token}"
-    background_tasks.add_task(send_email, email, reset_url)
+    background_tasks.add_task(send_email_password, email, reset_url)
     return {"mensaje": "Si el correo existe, se enviará un enlace de recuperación."}

@@ -126,6 +126,8 @@ class DocumentoVersion(Base):
     creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     aprobado_por_id = Column(BigInteger, ForeignKey(f"{SCHEMA_NAME}.usuario.usuario_id"), nullable=True)
     fecha_autorizacion = Column(DateTime(timezone=True))
+    revisado_por_id = Column(BigInteger, ForeignKey(f"{SCHEMA_NAME}.usuario.usuario_id"), nullable=True)
+    fecha_revision = Column(DateTime(timezone=True), nullable=True)
     deleted_at = Column(DateTime(timezone=True))
 
 class Empresa(Base):

@@ -174,3 +174,42 @@ Authorization: Bearer {{TOKEN}}
 
 [5]
 ###
+POST {{BASE_URL}}/documents/create
+Content-Type: multipart/form-data; boundary=boundary
+Authorization: Bearer {{TOKEN}}
+
+--boundary
+Content-Disposition: form-data; name="nombre"
+
+Matriz de requerimientos
+--boundary
+Content-Disposition: form-data; name="tipo_item_id"
+
+1
+--boundary
+Content-Disposition: form-data; name="area_responsable_item_id"
+
+2
+--boundary
+Content-Disposition: form-data; name="creador_id"
+
+3
+--boundary
+Content-Disposition: form-data; name="revisado_por_id"
+
+4
+--boundary
+Content-Disposition: form-data; name="aprobador_por_id"
+
+5
+--boundary
+Content-Disposition: form-data; name="clasificacion_item_id"
+
+6
+--boundary
+Content-Disposition: form-data; name="document"; filename="prueba.pdf"
+Content-Type: application/pdf
+
+< C:\Users\jmdel\Documents\prueba.pdf
+--boundary--
+###
