@@ -1,9 +1,20 @@
+import re
+
 from fastapi import UploadFile, HTTPException
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 from starlette import status
 from datetime import datetime
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from PyPDF2 import PdfReader, PdfWriter
+import os
+from google.cloud import storage
+
 from app.infrastructure.models import Documento, CatalogItem, DocumentoVersion, Areas, Usuario, ComentarioRevision, \
     Empresa
 from app.schemas.Dtos.DocumentDtos import DocumentCreateDto, DocumentVersionDto, ComentarioRevisionDto, \
@@ -26,6 +37,7 @@ def serialize_for_json(data):
         return data.isoformat()
     else:
         return data
+
 
 
 def create_documents_service(db: Session, user: dict, document_data: DocumentCreateDto, file: UploadFile):
@@ -73,8 +85,8 @@ def create_documents_service(db: Session, user: dict, document_data: DocumentCre
 
     valor: str = code_document_type.code
     code_document = generar_codigo_documento(db, valor)
-    # file_url = upload_file_to_gcs(file, f"{code_document}-v1.pdf")
-    file_url = f"{code_document}-v1.pdf"
+    file_url = upload_file_to_gcs(file, f"{code_document}-v1.pdf")
+    # file_url = f"{code_document}-v1.pdf"
     # Crear nuevo documento
     new_document = Documento(
         nombre=document_data.nombre,
@@ -347,8 +359,9 @@ def send_document_notifications(db: Session, version_id: int):
         send_email_notification(notification_aprobador)
 
 
+# Modificación de create_comentario_revision_service: llamar al helper después del commit
 def create_comentario_revision_service(db: Session, user: dict, comentario_data: ComentarioRevisionDto):
-    usuario_id = user.get('user_id')
+    usuario_id = user.get('user_id')  # usar la misma clave que el resto del servicio
     if not usuario_id:
         raise HTTPException(status_code=400, detail="Usuario no válido")
 
@@ -367,6 +380,21 @@ def create_comentario_revision_service(db: Session, user: dict, comentario_data:
 
     try:
         db.commit()
+        # después del commit, intentar modificar el PDF en GCS
+        try:
+            if version and version.archivo_url:
+                # pasar el id del usuario como cadena para que _overlay busque por ID
+                _overlay_pdf_with_status_image(
+                    db,
+                    version.archivo_url,
+                    comentario_data.status_item_id,
+                    signer_name=str(usuario_id),
+                    fecha=datetime.now()
+                )
+        except Exception as e:
+            # no silenciar: devolver error claro para depuración
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail=f"Error al agregar la firma al PDF: {e}")
         return "Comentario creado correctamente"
     except IntegrityError as e:
         db.rollback()
@@ -390,3 +418,220 @@ def get_comentarios_by_version_service(db: Session, version_id: int):
         .all()
     )
     return [dict(r._mapping) for r in resultados]
+
+
+def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, signer_name: str = None, fecha: datetime = None):
+    if not archivo_url:
+        return False
+
+    status_item = db.query(CatalogItem).filter(CatalogItem.item_id == status_item_id).first()
+    status_name = (status_item.name or "").lower() if status_item else ""
+
+    # decidir columna: 0 = izquierda, 1 = centro, 2 = derecha
+    if "por autorizar" in status_name:
+        column = 1
+    elif "aprob" in status_name:
+        column = 2
+    else:
+        column = 0
+
+    # Buscar usuario a partir de signer_name
+    usuario_obj = None
+    if signer_name:
+        s = str(signer_name).strip()
+        if re.fullmatch(r'\d+', s):
+            uid = int(s)
+            usuario_obj = db.query(Usuario).filter(Usuario.usuario_id == uid).first()
+        else:
+            full = func.concat(Usuario.first_name, " ", Usuario.last_name)
+            usuario_obj = db.query(Usuario).filter(full == s).first()
+            if not usuario_obj:
+                usuario_obj = db.query(Usuario).filter(
+                    func.concat(Usuario.first_name, " ", Usuario.last_name).ilike(f"%{s}%")).first()
+
+    if not usuario_obj or not usuario_obj.url_firma:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no cuenta con firma")
+
+    def _extract_blob_name_from_url(url: str) -> str | None:
+        if not url:
+            return None
+        p = urlparse(url)
+        if p.scheme == "gs":
+            return p.path.lstrip("/")
+        if p.scheme in ("http", "https"):
+            path = p.path.lstrip("/")
+            netloc = (p.netloc or "")
+            if netloc.endswith("storage.googleapis.com"):
+                parts = path.split("/", 1)
+                if len(parts) == 2:
+                    return parts[1]
+                return None
+            if netloc.endswith(".storage.googleapis.com"):
+                return path
+            segments = path.split("/")
+            if len(segments) >= 4 and segments[0] == "b" and segments[2] == "o":
+                return "/".join(segments[3:])
+            bucket_name = os.environ.get("BUCKET_NAME")
+            if bucket_name and path.startswith(f"{bucket_name}/"):
+                return path[len(bucket_name) + 1 :]
+            return path
+        return url
+
+    bucket_name = os.environ.get("BUCKET_NAME")
+    if not bucket_name:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket no configurado")
+
+    client = storage.Client()
+
+    # Obtener nombre del blob del PDF normalizando la URL
+    pdf_blob_name = _extract_blob_name_from_url(archivo_url)
+    if not pdf_blob_name:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nombre de blob del PDF no válido")
+
+    # Descargar el PDF original
+    try:
+        bucket = client.bucket(bucket_name)
+        pdf_blob = bucket.blob(pdf_blob_name)
+        pdf_bytes = pdf_blob.download_as_bytes()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error descargando PDF: {str(e)}"
+        )
+
+    # Descargar la imagen de firma
+    try:
+        firma_blob_name = _extract_blob_name_from_url(usuario_obj.url_firma)
+        if not firma_blob_name:
+            raise ValueError("Nombre de blob de firma no válido")
+
+        blob_firma = bucket.blob(firma_blob_name)
+        signature_bytes = blob_firma.download_as_bytes()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error descargando firma: {str(e)}"
+        )
+
+    # Procesar la imagen de firma
+    try:
+        from PIL import Image as PILImage
+        import io
+
+        # Abrir imagen y convertir a RGBA
+        img = PILImage.open(io.BytesIO(signature_bytes))
+
+        # Convertir a RGBA si no lo está
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+
+        # Crear un nuevo fondo blanco
+        background = PILImage.new('RGBA', img.size, (255, 255, 255, 0))
+
+        # Combinar imagen con fondo
+        img = PILImage.alpha_composite(background, img)
+
+        # Guardar como PNG en buffer (preserva transparencia)
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG', optimize=True)
+        img_buffer.seek(0)
+
+        # Crear ImageReader desde el buffer
+        img_reader = ImageReader(img_buffer)
+        img_w, img_h = img.size
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error procesando imagen de firma: {str(e)}"
+        )
+
+    # Procesar el PDF
+    try:
+        reader = PdfReader(BytesIO(pdf_bytes))
+        if not reader.pages:
+            raise ValueError("PDF sin páginas")
+
+        first_page = reader.pages[0]
+        media = first_page.mediabox
+        page_width = float(media.width)
+        page_height = float(media.height)
+
+        # Calcular dimensiones y posición
+        third_width = page_width / 3.0
+        target_w = third_width * 0.8
+        scale = target_w / img_w if img_w else 1.0
+        target_h = img_h * scale
+
+        # Posicionar en la columna correspondiente
+        x = (column * third_width) + (third_width - target_w) / 2.0
+        y = (page_height - target_h) / 2.0
+
+        # Preparar texto
+        fecha = fecha or datetime.now()
+        fecha_str = fecha.strftime("%d-%m-%Y %H:%M")
+
+        if "aprob" in status_name:
+            label = "Aprobado por: "
+        elif "rechaz" in status_name or "no aprobado" in status_name:
+            label = "Rechazado por: "
+        else:
+            label = "Revisado por: "
+
+        nombre_completo = f"{usuario_obj.first_name} {usuario_obj.last_name}".strip()
+        display_name = f"{label}{nombre_completo}"
+
+        # Crear overlay
+        packet = BytesIO()
+        c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+
+        # Dibujar imagen con preserveAspectRatio
+        c.drawImage(
+            img_reader,
+            x, y,
+            width=target_w,
+            height=target_h,
+            mask='auto',
+            preserveAspectRatio=True
+        )
+
+        # Configurar fuente
+        c.setFont("Helvetica", 10)
+
+        # Calcular posiciones de texto
+        text_x = x + target_w / 2.0
+        text_y_name = y - 12
+        text_y_date = text_y_name - 12
+
+        # Dibujar textos
+        c.drawCentredString(text_x, text_y_name, display_name)
+        c.drawCentredString(text_x, text_y_date, fecha_str)
+
+        c.save()
+        packet.seek(0)
+
+        # Merge con PDF original
+        overlay_reader = PdfReader(packet)
+        writer = PdfWriter()
+
+        for i, page in enumerate(reader.pages):
+            if i == 0:
+                page.merge_page(overlay_reader.pages[0])
+            writer.add_page(page)
+
+        # Guardar resultado
+        output = BytesIO()
+        writer.write(output)
+        output.seek(0)
+
+        # Subir PDF modificado
+        pdf_blob.upload_from_file(output, content_type='application/pdf')
+
+        return True
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error procesando PDF: {str(e)}"
+        )
+

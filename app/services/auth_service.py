@@ -1,4 +1,6 @@
-from fastapi import Depends,HTTPException,BackgroundTasks
+import uuid
+
+from fastapi import Depends, HTTPException, BackgroundTasks, UploadFile
 import os
 from datetime import timedelta, timezone,datetime
 from fastapi.security import OAuth2PasswordBearer
@@ -14,8 +16,7 @@ from app.schemas.Dtos.CreateUserRequest import CreateUserRequest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 
-
-
+from app.services.google_cloud_aservice import upload_file_to_gcs
 from app.utils.send_email import send_email_password
 
 load_dotenv()
@@ -55,6 +56,7 @@ def get_current_user(token:Annotated[str, Depends(oauth2_scheme)]):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("email")
         user_id: int = payload.get("sub")
+        first_name: str = payload.get("first_name")
         last_name: str = payload.get("last_name")
         active: bool = payload.get("activo")
         empresa_id: int = payload.get("empresa_id")
@@ -68,6 +70,7 @@ def get_current_user(token:Annotated[str, Depends(oauth2_scheme)]):
         return {
             'user_id': user_id,
             'email': email,
+            'first_name': first_name,
             'last_name': last_name,
             'empresa_id': empresa_id,
             'area_id': area_id,
@@ -225,3 +228,42 @@ def forgot_password_service(email: str, db: Session, background_tasks: Backgroun
     reset_url = f"{url_site}/reset-password?data={token}"
     background_tasks.add_task(send_email_password, email, reset_url)
     return {"mensaje": "Si el correo existe, se enviará un enlace de recuperación."}
+
+def upload_firma_service(db: Session, user: dict, file: UploadFile) -> str:
+    """
+    Sube una imagen de firma a GCS y guarda la URL en Usuario.url_firma.
+    Retorna la URL pública.
+    """
+    # autenticación/validación simple
+    if user is None or user.get("user_id") is None:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado")
+
+    if file is None or not (file.content_type or "").startswith("image/"):
+        raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
+
+    usuario_id = user.get("user_id")
+
+    # generar nombre único para el blob
+    original_name = os.path.basename(file.filename or "firma")
+    unique_name = f"{int(datetime.utcnow().timestamp())}_{uuid.uuid4().hex}_{original_name}"
+    destination_blob = f"firmas/{usuario_id}/{unique_name}"
+
+    try:
+        public_url = upload_file_to_gcs(file, destination_blob)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error subiendo imagen a almacenamiento") from e
+
+    # actualizar registro del usuario
+    db_user = db.query(Usuario).filter(Usuario.usuario_id == usuario_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    db_user.url_firma = public_url
+    try:
+        db.commit()
+        db.refresh(db_user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error guardando URL en el usuario") from e
+
+    return public_url
