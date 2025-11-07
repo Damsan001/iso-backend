@@ -14,6 +14,8 @@ from reportlab.lib.utils import ImageReader
 from PyPDF2 import PdfReader, PdfWriter
 import os
 from google.cloud import storage
+from PIL import Image as PILImage
+import io
 
 from app.infrastructure.models import Documento, CatalogItem, DocumentoVersion, Areas, Usuario, ComentarioRevision, \
     Empresa
@@ -116,6 +118,14 @@ def create_documents_service(db: Session, user: dict, document_data: DocumentCre
     try:
         db.commit()
         send_document_notifications(db=db, version_id=new_version.version_id)
+        _overlay_pdf_with_status_image(
+            db,
+            new_version.archivo_url,
+            initial_state.item_id,
+            signer_name=str(document_data.creador_id),
+            fecha=datetime.now( )
+        )
+
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
@@ -359,7 +369,7 @@ def send_document_notifications(db: Session, version_id: int):
         send_email_notification(notification_aprobador)
 
 
-# Modificación de create_comentario_revision_service: llamar al helper después del commit
+
 def create_comentario_revision_service(db: Session, user: dict, comentario_data: ComentarioRevisionDto):
     usuario_id = user.get('user_id')  # usar la misma clave que el resto del servicio
     if not usuario_id:
@@ -515,8 +525,7 @@ def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, si
 
     # Procesar la imagen de firma
     try:
-        from PIL import Image as PILImage
-        import io
+
 
         # Abrir imagen y convertir a RGBA
         img = PILImage.open(io.BytesIO(signature_bytes))
@@ -525,7 +534,7 @@ def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, si
         if img.mode != 'RGBA':
             img = img.convert('RGBA')
 
-        # Crear un nuevo fondo blanco
+        # Crear un nuevo fondo transparente
         background = PILImage.new('RGBA', img.size, (255, 255, 255, 0))
 
         # Combinar imagen con fondo
@@ -557,35 +566,68 @@ def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, si
         page_width = float(media.width)
         page_height = float(media.height)
 
+        left_margin = 40.0  # margen izquierdo en puntos (ajusta para mover todo a la derecha)
+        right_margin = 20.0
+        column_gap = 2  # px: reducir este valor para disminuir separación entre columnas
+        total_gaps = 2 * column_gap
+        columns_vertical_shift = 130.0
+        available_width = page_width - left_margin - right_margin - total_gaps
+        image_scale_factor = 0.6
+        column_width = available_width / 3.0
+        print(f"Page size: {page_width} x {page_height}")
+        max_image_width_pts = column_width * 0.8
+        if available_width <= 0:
+            raise ValueError("Ancho de página insuficiente para los márgenes/gaps configurados")
+        column_width = available_width / 3.0
+        print(f"Page size: {page_width} x {page_height}")
         # Calcular dimensiones y posición
         third_width = page_width / 3.0
-        target_w = third_width * 0.8
+        print(f"third_width {third_width}")
+        target_w = max_image_width_pts * image_scale_factor
+        print(f"target_w {target_w}")
         scale = target_w / img_w if img_w else 1.0
+        print(f"scale {scale}")
         target_h = img_h * scale
+        print(f"target_h {target_h}")
 
-        # Posicionar en la columna correspondiente
-        x = (column * third_width) + (third_width - target_w) / 2.0
-        y = (page_height - target_h) / 2.0
+        # Reservar espacio para texto encima de la imagen
+        text_space = 36  # espacio total aproximado para nombre y fecha
+        bottom_margin = 30  # distancia desde el borde inferior
+        y = bottom_margin + columns_vertical_shift
+        print(f"y column {y}")
+        # Asegurar que imagen + texto quepan en la página; si no, reducir escala
+        max_allowed_height = page_height - y - text_space - 10
+        if target_h > max_allowed_height and max_allowed_height > 10:
+            scale *= max_allowed_height / target_h
+            target_h = img_h * scale
+            target_w = img_w * scale
+
+        # Posicionar en la columna correspondiente (coordenada X)
+        x = left_margin + column * (column_width + column_gap) + (column_width - target_w) / 2.0
+        print(f"x column {x}")
+        # Y en coordenada de ReportLab: colocar la imagen encima del margen inferior
+
 
         # Preparar texto
         fecha = fecha or datetime.now()
         fecha_str = fecha.strftime("%d-%m-%Y %H:%M")
 
-        if "aprob" in status_name:
-            label = "Aprobado por: "
-        elif "rechaz" in status_name or "no aprobado" in status_name:
-            label = "Rechazado por: "
-        else:
-            label = "Revisado por: "
+        # if "aprob" in status_name:
+        #     label = ""
+        # elif "rechaz" in status_name or "no aprobado" in status_name:
+        #     label = ""
+        # else:
+        #     label = ""
 
         nombre_completo = f"{usuario_obj.first_name} {usuario_obj.last_name}".strip()
-        display_name = f"{label}{nombre_completo}"
+        # display_name = f"{label}{nombre_completo}"
+        display_name = f"{nombre_completo}"
 
         # Crear overlay
         packet = BytesIO()
         c = canvas.Canvas(packet, pagesize=(page_width, page_height))
 
-        # Dibujar imagen con preserveAspectRatio
+        # Dibujar imagen en la parte inferior
         c.drawImage(
             img_reader,
             x, y,
@@ -596,14 +638,22 @@ def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, si
         )
 
         # Configurar fuente
-        c.setFont("Helvetica", 10)
+        font_size = 10
+        c.setFont("Helvetica", font_size)
 
-        # Calcular posiciones de texto
+        # Calcular posiciones de texto: colocar encima de la imagen
         text_x = x + target_w / 2.0
-        text_y_name = y - 12
-        text_y_date = text_y_name - 12
+        text_y_name = y + target_h + 8
+        text_y_date = text_y_name + 12
 
-        # Dibujar textos
+        # Si el texto supera el alto de la página, reducir tamaño de fuente
+        if text_y_date > page_height - 10:
+            font_size = 8
+            c.setFont("Helvetica", font_size)
+            text_y_name = y + target_h + 6
+            text_y_date = text_y_name + 10
+
+        # Dibujar textos centrados sobre la imagen
         c.drawCentredString(text_x, text_y_name, display_name)
         c.drawCentredString(text_x, text_y_date, fecha_str)
 
@@ -634,4 +684,3 @@ def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, si
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error procesando PDF: {str(e)}"
         )
-
