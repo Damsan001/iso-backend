@@ -156,6 +156,8 @@ class Usuario(Base):
     email = Column(Text, nullable=False)
     hashed_password = Column(String)
     activo = Column(Boolean, nullable=False, default=True, server_default="true")
+    url_foto = Column(Text)  # nueva columna: URL de la foto del usuario
+    url_firma = Column(Text)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at = Column(DateTime(timezone=True))

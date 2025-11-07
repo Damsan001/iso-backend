@@ -16,3 +16,6 @@ passlib==1.7.4
 dotenv
 starlette
 google-cloud-storage
+reportlab
+PyPDF2
+Pillow
