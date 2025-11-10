@@ -3,8 +3,7 @@ from __future__ import annotations
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import  sessionmaker
-from app.infrastructure.base import Base
+from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
@@ -30,8 +29,8 @@ metadata = MetaData(schema=SCHEMA)
 # Session factory
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
 
-def get_db():
 
+def get_db():
     db = SessionLocal()
     try:
         yield db

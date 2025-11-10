@@ -9,6 +9,7 @@ from app.infrastructure.audit_vars import current_actor  # <- cambia el import
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
+
 async def audit_context(db: db_dependency, user: user_dependency):
     actor = user.get("id") or user.get("username") or user.get("email")
     token = current_actor.set(actor)

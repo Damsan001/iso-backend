@@ -1,12 +1,10 @@
 from sqlalchemy import MetaData
-from sqlalchemy import pool,engine_from_config
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import pool, engine_from_config
 from alembic import context
 import os
 import sys
 from logging.config import fileConfig
 from dotenv import load_dotenv
-import app.infrastructure.models
 from app.infrastructure.base import Base
 
 config = context.config
@@ -20,7 +18,7 @@ NAMING_CONVENTION = {
     "uq": "uq_%(table_name)s_%(column_0_name)s",
     "ck": "ck_%(table_name)s_%(constraint_name)s",
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s"
+    "pk": "pk_%(table_name)s",
 }
 metadata = MetaData(naming_convention=NAMING_CONVENTION)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -34,7 +32,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata =  Base.metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

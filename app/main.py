@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI
@@ -13,17 +14,17 @@ from app.infrastructure.db import engine
 from app.routers.catalogs import router as catalogs_router
 from app.routers.assets import router as assets_router
 from app.routers.admin import router as admin_router
-from app.users.users_router import router as users_router
 from contextlib import asynccontextmanager
 from app.routers.risk_router import router as risks_router
 from app.routers import risk_router
+from app.routers.treatment_router import router as treatment_router
 
 @asynccontextmanager
 async def lifespan(app):
-    import app.infrastructure.audit
     yield
-app = FastAPI(title="Gestión Documental ISO27001", lifespan=lifespan)
 
+
+app = FastAPI(title="Gestión Documental ISO27001", lifespan=lifespan)
 
 
 ALLOWED_ORIGINS = [
@@ -32,7 +33,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
     "https://appiso.insaight.com.mx",
-    "https://appisoqa.insaight.com.mx"
+    "https://appisoqa.insaight.com.mx",
 ]
 
 app.add_middleware(
@@ -52,6 +53,7 @@ app.include_router(documents_router, prefix="/documents", tags=["Documentos"])
 app.include_router(reports_router, prefix="/reports", tags=["Reportes"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 app.include_router(risks_router, prefix="/riesgos", tags=["Riesgos"])
+app.include_router(treatment_router, tags=["Tratamientos"])
 
 # Routers con prefijos locales
 # app.include_router(auth_router,      prefix="/auth",      tags=["Autenticación"])
@@ -81,10 +83,15 @@ def health_dbinfo():
     url = engine.url
     safe_url = f"{url.get_backend_name()}+{url.get_driver_name()}://{url.username}@{url.host}:{url.port}/{url.database}"
     with engine.connect() as conn:
-        meta = conn.execute(text("SELECT current_database(), current_schema(), session_user")).first()
+        meta = conn.execute(
+            text("SELECT current_database(), current_schema(), session_user")
+        ).first()
         search_path = conn.execute(text("SHOW search_path")).scalar()
-        exists = conn.execute(text(
-            "SELECT to_regclass('iso.catalog'), to_regclass('iso.catalog_item'), to_regclass('iso.activo')")).first()
+        exists = conn.execute(
+            text(
+                "SELECT to_regclass('iso.catalog'), to_regclass('iso.catalog_item'), to_regclass('iso.activo')"
+            )
+        ).first()
     return {
         "engine_url": safe_url,
         "database": meta[0],

@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class VersionCreate(BaseModel):
     description: str
     justification: str
     requested_by: str
+
 
 class VersionInfo(BaseModel):
     version: str
@@ -12,4 +14,3 @@ class VersionInfo(BaseModel):
     description: str
     justification: str
     requested_by: str
-

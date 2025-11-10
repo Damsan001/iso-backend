@@ -1,0 +1,358 @@
+﻿E402 Module level import not at top of file
+ --> app\main.py:5:1
+  |
+3 | load_dotenv()
+4 |
+5 | from fastapi import FastAPI
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+6 | from app.routers.documents import router as documents_router
+7 | from app.routers.auth import router as auth_router
+  |
+
+E402 Module level import not at top of file
+ --> app\main.py:6:1
+  |
+5 | from fastapi import FastAPI
+6 | from app.routers.documents import router as documents_router
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7 | from app.routers.auth import router as auth_router
+8 | from app.users.users_router import router as users_router
+  |
+
+E402 Module level import not at top of file
+ --> app\main.py:7:1
+  |
+5 | from fastapi import FastAPI
+6 | from app.routers.documents import router as documents_router
+7 | from app.routers.auth import router as auth_router
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 | from app.users.users_router import router as users_router
+9 | from app.routers.reports import router as reports_router
+  |
+
+E402 Module level import not at top of file
+  --> app\main.py:8:1
+   |
+ 6 | from app.routers.documents import router as documents_router
+ 7 | from app.routers.auth import router as auth_router
+ 8 | from app.users.users_router import router as users_router
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 | from app.routers.reports import router as reports_router
+10 | from fastapi.middleware.cors import CORSMiddleware
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:9:1
+   |
+ 7 | from app.routers.auth import router as auth_router
+ 8 | from app.users.users_router import router as users_router
+ 9 | from app.routers.reports import router as reports_router
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10 | from fastapi.middleware.cors import CORSMiddleware
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:10:1
+   |
+ 8 | from app.users.users_router import router as users_router
+ 9 | from app.routers.reports import router as reports_router
+10 | from fastapi.middleware.cors import CORSMiddleware
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+11 |
+12 | from sqlalchemy import text
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:12:1
+   |
+10 | from fastapi.middleware.cors import CORSMiddleware
+11 |
+12 | from sqlalchemy import text
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+13 | from app.infrastructure.db import engine
+14 | from app.routers.catalogs import router as catalogs_router
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:13:1
+   |
+12 | from sqlalchemy import text
+13 | from app.infrastructure.db import engine
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 | from app.routers.catalogs import router as catalogs_router
+15 | from app.routers.assets import router as assets_router
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:14:1
+   |
+12 | from sqlalchemy import text
+13 | from app.infrastructure.db import engine
+14 | from app.routers.catalogs import router as catalogs_router
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 | from app.routers.assets import router as assets_router
+16 | from app.routers.admin import router as admin_router
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:15:1
+   |
+13 | from app.infrastructure.db import engine
+14 | from app.routers.catalogs import router as catalogs_router
+15 | from app.routers.assets import router as assets_router
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+16 | from app.routers.admin import router as admin_router
+17 | from contextlib import asynccontextmanager
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:16:1
+   |
+14 | from app.routers.catalogs import router as catalogs_router
+15 | from app.routers.assets import router as assets_router
+16 | from app.routers.admin import router as admin_router
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17 | from contextlib import asynccontextmanager
+18 | from app.routers.risk_router import router as risks_router
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:17:1
+   |
+15 | from app.routers.assets import router as assets_router
+16 | from app.routers.admin import router as admin_router
+17 | from contextlib import asynccontextmanager
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 | from app.routers.risk_router import router as risks_router
+19 | from app.routers import risk_router
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:18:1
+   |
+16 | from app.routers.admin import router as admin_router
+17 | from contextlib import asynccontextmanager
+18 | from app.routers.risk_router import router as risks_router
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 | from app.routers import risk_router
+   |
+
+E402 Module level import not at top of file
+  --> app\main.py:19:1
+   |
+17 | from contextlib import asynccontextmanager
+18 | from app.routers.risk_router import router as risks_router
+19 | from app.routers import risk_router
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+F811 Redefinition of unused `UsuarioResponseDto` from line 4
+  --> app\schemas\Dtos\UsuarioResponseDto.py:18:7
+   |
+18 | class UsuarioResponseDto(BaseModel):
+   |       ^^^^^^^^^^^^^^^^^^ `UsuarioResponseDto` redefined here
+19 |     usuario_id: int
+20 |     area_id: int
+   |
+  ::: app\schemas\Dtos\UsuarioResponseDto.py:4:7
+   |
+ 4 | class UsuarioResponseDto(BaseModel):
+   |       ------------------ previous definition of `UsuarioResponseDto` here
+ 5 |     usuario_id: int
+ 6 |     area_id: int
+   |
+help: Remove definition: `UsuarioResponseDto`
+
+E402 Module level import not at top of file
+   --> app\schemas\assets.py:142:1
+    |
+142 | from typing import List  # si no est├í ya importado arriba
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+  --> app\services\admin_service.py:65:17
+   |
+63 |     roles = (
+64 |         db.query(Rol)
+65 |         .filter(Rol.activo == True)
+   |                 ^^^^^^^^^^^^^^^^^^
+66 |         .filter(Rol.empresa_id == user.get("empresa_id"))
+67 |         .all()
+   |
+help: Replace with `Rol.activo`
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+  --> app\services\admin_service.py:79:17
+   |
+77 |         .filter(Rol.nombre.like(f"%{role_name}%"))
+78 |         .filter(Rol.empresa_id == user.get("empresa_id"))
+79 |         .filter(Rol.activo == True)
+   |                 ^^^^^^^^^^^^^^^^^^
+80 |         .all()
+81 |     )
+   |
+help: Replace with `Rol.activo`
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+   --> app\services\admin_service.py:188:60
+    |
+186 |     roles_antes = [r.rol_id for r in usuario.roles]
+187 |
+188 |     roles = db.query(Rol).filter(Rol.rol_id.in_(role_ids), Rol.activo == True).all()
+    |                                                            ^^^^^^^^^^^^^^^^^^
+189 |     if not roles:
+190 |         raise HTTPException(
+    |
+help: Replace with `Rol.activo`
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+   --> app\services\admin_service.py:230:56
+    |
+229 |     roles_to_remove = (
+230 |         db.query(Rol).filter(Rol.rol_id.in_(role_ids), Rol.activo == True).all()
+    |                                                        ^^^^^^^^^^^^^^^^^^
+231 |     )
+232 |     found_role_ids = {r.rol_id for r in roles_to_remove}
+    |
+help: Replace with `Rol.activo`
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+   --> app\services\admin_service.py:279:40
+    |
+277 |     rol = (
+278 |         db.query(Rol)
+279 |         .filter(Rol.rol_id == role_id, Rol.activo == True)
+    |                                        ^^^^^^^^^^^^^^^^^^
+280 |         .filter(Rol.empresa_id == user.get("empresa_id"))
+281 |         .first()
+    |
+help: Replace with `Rol.activo`
+
+E712 Avoid equality comparisons to `True`; use `Permiso.activo:` for truth checks
+   --> app\services\admin_service.py:300:17
+    |
+298 |         db.query(Permiso)
+299 |         .filter(Permiso.empresa_id == user.get("empresa_id"))
+300 |         .filter(Permiso.activo == True)
+    |                 ^^^^^^^^^^^^^^^^^^^^^^
+301 |         .all()
+302 |     )
+    |
+help: Replace with `Permiso.activo`
+
+E712 Avoid equality comparisons to `True`; use `Permiso.activo:` for truth checks
+   --> app\services\admin_service.py:313:17
+    |
+311 |         .filter(Permiso.nombre.like(f"%{permission_name}%"))
+312 |         .filter(Permiso.empresa_id == user.get("empresa_id"))
+313 |         .filter(Permiso.activo == True)
+    |                 ^^^^^^^^^^^^^^^^^^^^^^
+314 |         .all()
+315 |     )
+    |
+help: Replace with `Permiso.activo`
+
+E712 Avoid equality comparisons to `True`; use `Permiso.activo:` for truth checks
+   --> app\services\admin_service.py:430:57
+    |
+428 |     permisos = (
+429 |         db.query(Permiso)
+430 |         .filter(Permiso.permiso_id.in_(permission_ids), Permiso.activo == True)
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^
+431 |         .all()
+432 |     )
+    |
+help: Replace with `Permiso.activo`
+
+E712 Avoid equality comparisons to `True`; use `Permiso.activo:` for truth checks
+   --> app\services\admin_service.py:488:57
+    |
+486 |     permisos_to_remove = (
+487 |         db.query(Permiso)
+488 |         .filter(Permiso.permiso_id.in_(permission_ids), Permiso.activo == True)
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^
+489 |         .all()
+490 |     )
+    |
+help: Replace with `Permiso.activo`
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+   --> app\services\admin_service.py:540:55
+    |
+538 | ):
+539 |     check_auth_and_roles(user, ["Administrador"])
+540 |     rol = db.query(Rol).filter(Rol.rol_id == role_id, Rol.activo == True).first()
+    |                                                       ^^^^^^^^^^^^^^^^^^
+541 |     if not rol:
+542 |         raise HTTPException(status_code=404, detail="Rol no encontrado")
+    |
+help: Replace with `Rol.activo`
+
+E712 Avoid equality comparisons to `True`; use `Permiso.activo:` for truth checks
+   --> app\services\admin_service.py:546:57
+    |
+544 |     permisos = (
+545 |         db.query(Permiso)
+546 |         .filter(Permiso.permiso_id.in_(permission_ids), Permiso.activo == True)
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^
+547 |         .all()
+548 |     )
+    |
+help: Replace with `Permiso.activo`
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+   --> app\services\admin_service.py:583:55
+    |
+581 | ):
+582 |     check_auth_and_roles(user, ["Administrador"])
+583 |     rol = db.query(Rol).filter(Rol.rol_id == role_id, Rol.activo == True).first()
+    |                                                       ^^^^^^^^^^^^^^^^^^
+584 |     if not rol:
+585 |         raise HTTPException(status_code=404, detail="Rol no encontrado")
+    |
+help: Replace with `Rol.activo`
+
+E712 Avoid equality comparisons to `True`; use `Permiso.activo:` for truth checks
+   --> app\services\admin_service.py:590:57
+    |
+588 |     permisos_to_remove = (
+589 |         db.query(Permiso)
+590 |         .filter(Permiso.permiso_id.in_(permission_ids), Permiso.activo == True)
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^
+591 |         .all()
+592 |     )
+    |
+help: Replace with `Permiso.activo`
+
+F811 Redefinition of unused `get_permissions_by_role_service` from line 275
+   --> app\services\admin_service.py:623:5
+    |
+623 | def get_permissions_by_role_service(db: Session, user: dict, role_id: int):
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `get_permissions_by_role_service` redefined here
+624 |     check_auth_and_roles(user, ["Administrador"])
+625 |     rol = (
+    |
+   ::: app\services\admin_service.py:275:5
+    |
+275 | def get_permissions_by_role_service(db: Session, user: dict, role_id: int):
+    |     ------------------------------- previous definition of `get_permissions_by_role_service` here
+276 |     check_auth_and_roles(user, ["Administrador"])
+277 |     rol = (
+    |
+help: Remove definition: `get_permissions_by_role_service`
+
+E712 Avoid equality comparisons to `True`; use `Rol.activo:` for truth checks
+   --> app\services\admin_service.py:627:40
+    |
+625 |     rol = (
+626 |         db.query(Rol)
+627 |         .filter(Rol.rol_id == role_id, Rol.activo == True)
+    |                                        ^^^^^^^^^^^^^^^^^^
+628 |         .filter(Rol.empresa_id == user.get("empresa_id"))
+629 |         .first()
+    |
+help: Replace with `Rol.activo`
+
+Found 31 errors.
+No fixes available (14 hidden fixes can be enabled with the `--unsafe-fixes` option).

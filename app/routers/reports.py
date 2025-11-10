@@ -5,10 +5,11 @@ from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/reports", tags=["Reportes"])
 
+
 @router.post(
     "/audit",
     response_class=StreamingResponse,
-    summary="Genera el Excel de auditoría según filtros"
+    summary="Genera el Excel de auditoría según filtros",
 )
 def audit_report_excel(filters: AuditFilter):
     """
@@ -19,7 +20,5 @@ def audit_report_excel(filters: AuditFilter):
     return StreamingResponse(
         excel_io,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": 'attachment; filename="audit_report.xlsx"'
-        }
+        headers={"Content-Disposition": 'attachment; filename="audit_report.xlsx"'},
     )

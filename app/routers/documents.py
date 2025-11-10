@@ -3,8 +3,10 @@ from typing import List
 from fastapi import Query
 from typing import Optional
 from app.schemas.document import (
-    DocumentCreate, Document,
-    TypeOfDocument, Classification
+    DocumentCreate,
+    Document,
+    TypeOfDocument,
+    Classification,
 )
 from fastapi.responses import FileResponse
 from pathlib import Path
@@ -13,6 +15,7 @@ from app.services.document_service import DocumentService
 from app.infrastructure.version_repository import VersionRepository
 
 router = APIRouter(tags=["Documentos"])
+
 
 @router.post("/", response_model=Document)
 async def create_document(
@@ -23,7 +26,7 @@ async def create_document(
     reviewer: str = Form(...),
     approver: str = Form(...),
     classification: Classification = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
 ):
     """
     Crea un documento:
@@ -37,9 +40,10 @@ async def create_document(
         author=author,
         reviewer=reviewer,
         approver=approver,
-        classification=classification
+        classification=classification,
     )
     return await DocumentService.create_document(dto, file)
+
 
 @router.post("/{code}/versions", response_model=VersionInfo)
 async def create_version(
@@ -47,12 +51,10 @@ async def create_version(
     description: str = Form(..., description="Descripción del cambio"),
     justification: str = Form(..., description="Justificación del cambio"),
     requested_by: str = Form(..., description="Usuario solicitante"),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
 ):
     version_data = VersionCreate(
-        description=description,
-        justification=justification,
-        requested_by=requested_by
+        description=description, justification=justification, requested_by=requested_by
     )
     return await DocumentService.add_version(code, version_data, file)
 
@@ -62,17 +64,21 @@ def list_versions(code: str):
     # opcional: validar existencia de doc_id
     return VersionRepository.list_versions(code)
 
+
 @router.get("/", response_model=List[Document])
 def list_documents(
     type: Optional[TypeOfDocument] = Query(
-        None, description="Filtrar por tipo de documento"),
+        None, description="Filtrar por tipo de documento"
+    ),
     area_responsible: Optional[str] = Query(
-        None, description="Filtrar por área responsable (texto libre)")
+        None, description="Filtrar por área responsable (texto libre)"
+    ),
 ):
     """
     Lista documentos; acepta filtros opcionales de tipo y área.
     """
     return DocumentService.list_documents(type, area_responsible)
+
 
 @router.get("/{code}/view", response_class=FileResponse)
 def download_document(code: str):
@@ -96,5 +102,5 @@ def download_document(code: str):
     return FileResponse(
         path=file_path,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{Path(file_path).name}"'}
+        headers={"Content-Disposition": f'inline; filename="{Path(file_path).name}"'},
     )

@@ -1,0 +1,11 @@
+ts=$(date +'%Y%m%d-%H%M%S')
+mkdir -p reports
+
+ruff check app >"reports/ruff-$ts.txt" 2>&1
+ruff format --check >"reports/ruff-format-$ts.txt" 2>&1
+mypy app >"reports/mypy-$ts.txt" 2>&1
+bandit -r app -ll -x tests,alembic >"reports/bandit-$ts.txt" 2>&1
+pip-audit -r requirements.txt >"reports/pip-audit-$ts.txt" 2>&1
+
+cat reports/*-$ts.txt > "reports/summary-$ts.txt"
+zip -j "reports/static-analysis-$ts.zip" reports/*-$ts.txt

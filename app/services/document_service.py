@@ -7,19 +7,18 @@ from app.infrastructure.document_repository import DocumentRepository
 from app.infrastructure.version_repository import VersionRepository
 from app.services.storage_service import LocalStorageService
 from app.schemas.document import TypeOfDocument
-from app.utils.text_utils import clear_name
 
 storage = LocalStorageService()
 
-class DocumentService:
 
+class DocumentService:
     @staticmethod
     async def create_document(data: DocumentCreate, file: UploadFile) -> Document:
         # 1) Validar existencia
         if DocumentRepository.exists(data.name, data.type):
             raise HTTPException(
                 status_code=400,
-                detail="El documento ya existe. Para nuevas versiones, use el endpoint de versionado."
+                detail="El documento ya existe. Para nuevas versiones, use el endpoint de versionado.",
             )
 
         # 2) Validar PDF
@@ -42,22 +41,17 @@ class DocumentService:
         initial_version = VersionCreate(
             description="Versión inicial",
             justification="Creación del documento",
-            requested_by=data.author
+            requested_by=data.author,
         )
         VersionRepository.create_version(
-            doc_id=doc.code,
-            version=1,
-            data=initial_version,
-            file_path=file_path
+            doc_id=doc.code, version=1, data=initial_version, file_path=file_path
         )
 
         return doc
 
     @staticmethod
     async def add_version(
-        code: str,
-        version_data: VersionCreate,
-        file: UploadFile
+        code: str, version_data: VersionCreate, file: UploadFile
     ) -> VersionInfo:
         # 1) Verificar que exista el documento
         doc = DocumentRepository.get_document(code)
@@ -77,10 +71,7 @@ class DocumentService:
 
         # 5) Registrar en document_versions.csv
         version_info = VersionRepository.create_version(
-            code,
-            next_v,
-            version_data,
-            file_path
+            code, next_v, version_data, file_path
         )
 
         # 6) **Actualizar** la versión en documents.csv
@@ -97,14 +88,13 @@ class DocumentService:
 
     @staticmethod
     def list_documents(
-        filter_type: TypeOfDocument | None = None,
-        filter_area: str | None = None
+        filter_type: TypeOfDocument | None = None, filter_area: str | None = None
     ) -> list[Document]:
         """
         Devuelve los documentos que coincidan con los filtros dados.
         """
         return DocumentRepository.list_documents(filter_type, filter_area)
-    
+
     @staticmethod
     def get_document(code: str) -> Document:
         """

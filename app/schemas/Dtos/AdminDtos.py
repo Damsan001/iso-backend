@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
+
 
 class RoleDTO(BaseModel):
     rol_id: int
@@ -7,7 +8,8 @@ class RoleDTO(BaseModel):
     nombre: str
     descripcion: str
 
-    model_config = {'from_attributes': True}
+    model_config = {"from_attributes": True}
+
 
 class CreateRoleDTO(BaseModel):
     empresa_id: int
@@ -15,7 +17,8 @@ class CreateRoleDTO(BaseModel):
     descripcion: str
     activo: bool = True
 
-    model_config = {'from_attributes': True}
+    model_config = {"from_attributes": True}
+
 
 class UpdateRoleDTO(BaseModel):
     empresa_id: Optional[int] = None
@@ -23,14 +26,16 @@ class UpdateRoleDTO(BaseModel):
     descripcion: Optional[str] = None
     activo: Optional[bool] = None
 
-    model_config = {'from_attributes': True}
+    model_config = {"from_attributes": True}
+
 
 class PermissionDTO(BaseModel):
     permiso_id: int
     codigo: str
     nombre: str
 
-    model_config = {'from_attributes': True}
+    model_config = {"from_attributes": True}
+
 
 class CreatePermissionDTO(BaseModel):
     empresa_id: int
@@ -39,7 +44,8 @@ class CreatePermissionDTO(BaseModel):
     descripcion: str
     activo: bool = True
 
-    model_config = {'from_attributes': True}
+    model_config = {"from_attributes": True}
+
 
 class UpdatePermissionDTO(BaseModel):
     empresa_id: Optional[int] = None
@@ -48,4 +54,4 @@ class UpdatePermissionDTO(BaseModel):
     descripcion: Optional[str] = None
     activo: Optional[bool] = None
 
-    model_config = {'from_attributes': True}
+    model_config = {"from_attributes": True}

@@ -2,6 +2,7 @@ import smtplib
 from email.message import EmailMessage
 import os
 
+
 def send_email(to_email: str, reset_url: str):
     smtp_server = os.getenv("SMTP_SERVER")
     smtp_port = int(os.getenv("SMTP_PORT", 587))
@@ -14,7 +15,9 @@ def send_email(to_email: str, reset_url: str):
     msg["Subject"] = "Recuperación de contraseña"
     msg["From"] = smtp_user
     msg["To"] = to_email
-    msg.set_content("Para restablecer tu contraseña, haz clic en el siguiente enlace:\n" + reset_url)
+    msg.set_content(
+        "Para restablecer tu contraseña, haz clic en el siguiente enlace:\n" + reset_url
+    )
 
     html_content = f"""
     <html>
@@ -26,7 +29,6 @@ def send_email(to_email: str, reset_url: str):
     </html>
     """
     msg.add_alternative(html_content, subtype="html")
-
 
     if smtp_ssl:
         with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
