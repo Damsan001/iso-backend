@@ -3,39 +3,32 @@ from pathlib import Path
 from datetime import date
 from typing import List, Optional
 
-from app.schemas.document import (
-    DocumentCreate,
-    Document,
-    TypeOfDocument,
-    Classification,
-)
+from app.schemas.document import DocumentCreate, Document, TypeOfDocument, Classification
 
 BASE_DIR = Path("data")
 DOC_CSV = BASE_DIR / "documents.csv"
 
-
 class DocumentRepository:
+
     @classmethod
     def _ensure_storage(cls):
         BASE_DIR.mkdir(parents=True, exist_ok=True)
         if not DOC_CSV.exists():
             with DOC_CSV.open("w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(
-                    [
-                        "id",
-                        "name",
-                        "type",
-                        "area_responsible",
-                        "author",
-                        "reviewer",
-                        "approver",
-                        "classification",
-                        "created_at",
-                        "code",
-                        "version",
-                    ]
-                )
+                writer.writerow([
+                    "id",
+                    "name",
+                    "type",
+                    "area_responsible",
+                    "author",
+                    "reviewer",
+                    "approver",
+                    "classification",
+                    "created_at",
+                    "code",
+                    "version"
+                ])
 
     @classmethod
     def exists(cls, name: str, doc_type: TypeOfDocument) -> bool:
@@ -75,21 +68,19 @@ class DocumentRepository:
 
         with DOC_CSV.open("a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(
-                [
-                    new_id,
-                    data.name,
-                    data.type.value,
-                    data.area_responsible,
-                    data.author,
-                    data.reviewer,
-                    data.approver,
-                    data.classification.value,
-                    created.isoformat(),
-                    code,
-                    version,
-                ]
-            )
+            writer.writerow([
+                new_id,
+                data.name,
+                data.type.value,
+                data.area_responsible,
+                data.author,
+                data.reviewer,
+                data.approver,
+                data.classification.value,
+                created.isoformat(),
+                code,
+                version
+            ])
 
         return Document(
             id=new_id,
@@ -102,7 +93,7 @@ class DocumentRepository:
             classification=data.classification,
             created_at=created,
             code=code,
-            version=version,
+            version=version
         )
 
     @classmethod
@@ -123,10 +114,10 @@ class DocumentRepository:
                         classification=Classification(row["classification"]),
                         created_at=date.fromisoformat(row["created_at"]),
                         code=row["code"],
-                        version=row["version"],
+                        version=row["version"]
                     )
         return None
-
+    
     @classmethod
     def update_version(cls, code: str, new_version: str) -> None:
         """
@@ -147,41 +138,31 @@ class DocumentRepository:
         with DOC_CSV.open("w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             # encabezados en el mismo orden
-            writer.writerow(
-                [
-                    "id",
-                    "name",
-                    "type",
-                    "area_responsible",
-                    "author",
-                    "reviewer",
-                    "approver",
-                    "classification",
-                    "created_at",
-                    "code",
-                    "version",
-                ]
-            )
+            writer.writerow([
+                "id","name","type","area_responsible","author",
+                "reviewer","approver","classification",
+                "created_at","code","version"
+            ])
             for row in rows:
-                writer.writerow(
-                    [
-                        row["id"],
-                        row["name"],
-                        row["type"],
-                        row["area_responsible"],
-                        row["author"],
-                        row["reviewer"],
-                        row["approver"],
-                        row["classification"],
-                        row["created_at"],
-                        row["code"],
-                        row["version"],
-                    ]
-                )
+                writer.writerow([
+                    row["id"],
+                    row["name"],
+                    row["type"],
+                    row["area_responsible"],
+                    row["author"],
+                    row["reviewer"],
+                    row["approver"],
+                    row["classification"],
+                    row["created_at"],
+                    row["code"],
+                    row["version"]
+                ])
 
     @classmethod
     def list_documents(
-        cls, filter_type: TypeOfDocument | None = None, filter_area: str | None = None
+        cls,
+        filter_type: TypeOfDocument | None = None,
+        filter_area: str | None = None
     ) -> List[Document]:
         """
         Lee todos los documentos y aplica filtros si vienen.
@@ -195,25 +176,20 @@ class DocumentRepository:
                 if filter_type and row["type"] != filter_type.value:
                     continue
                 # filtro por área (case-insensitive, parcial)
-                if (
-                    filter_area
-                    and filter_area.lower() not in row["area_responsible"].lower()
-                ):
+                if filter_area and filter_area.lower() not in row["area_responsible"].lower():
                     continue
                 # reconstruir modelo
-                results.append(
-                    Document(
-                        id=int(row["id"]),
-                        name=row["name"],
-                        type=TypeOfDocument(row["type"]),
-                        area_responsible=row["area_responsible"],
-                        author=row["author"],
-                        reviewer=row["reviewer"],
-                        approver=row["approver"],
-                        classification=Classification(row["classification"]),
-                        created_at=date.fromisoformat(row["created_at"]),
-                        code=row["code"],
-                        version=row["version"],
-                    )
-                )
+                results.append(Document(
+                    id=int(row["id"]),
+                    name=row["name"],
+                    type=TypeOfDocument(row["type"]),
+                    area_responsible=row["area_responsible"],
+                    author=row["author"],
+                    reviewer=row["reviewer"],
+                    approver=row["approver"],
+                    classification=Classification(row["classification"]),
+                    created_at=date.fromisoformat(row["created_at"]),
+                    code=row["code"],
+                    version=row["version"]
+                ))
         return results

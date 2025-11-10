@@ -2,19 +2,18 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from starlette import status
 
-from app.infrastructure.models import Activo, Catalog, CatalogItem, Areas
-from sqlalchemy import or_
+from app.infrastructure.models import Activo, Catalog, CatalogItem, Areas,Usuario
+from sqlalchemy import or_, func
 from fastapi import HTTPException
 
 from app.schemas.assets import ActivoCreate, ActivoUpdate
 from app.services.auth_service import ensure_authenticated, ensure_user_roles
 import os
-from typing import Tuple
+from typing import Optional, Tuple
 
 
-def _ensure_item_belongs_to(
-    db: Session, item_id: Optional[int], catalog_key: str, empresa_id: int
-) -> None:
+
+def _ensure_item_belongs_to(db: Session, item_id: Optional[int], catalog_key: str, empresa_id: int) -> None:
     if item_id is None:
         return
     exists = (
@@ -23,29 +22,24 @@ def _ensure_item_belongs_to(
         .filter(Catalog.catalog_key == catalog_key)
         .filter(CatalogItem.active.is_(True))
         .filter(CatalogItem.deleted_at.is_(None))
-        .filter(
-            or_(CatalogItem.empresa_id.is_(None), CatalogItem.empresa_id == empresa_id)
-        )
+        .filter(or_(CatalogItem.empresa_id == None, CatalogItem.empresa_id == empresa_id))
         .filter(CatalogItem.item_id == item_id)
         .first()
     )
     if not exists:
-        raise HTTPException(
-            status_code=400,
-            detail=f"El item {item_id} no pertenece al catálogo '{catalog_key}' o no está disponible para la empresa.",
-        )
+        raise HTTPException(status_code=400, detail=f"El item {item_id} no pertenece al catálogo '{catalog_key}' o no está disponible para la empresa.")
 
-
-def create_asset(payload: ActivoCreate, db: Session, user: dict):
-    squema = os.getenv("DB_SCHEMA") # noqa: F841
+def create_asset(payload: ActivoCreate,db: Session, user: dict):
+    squema = os.getenv("DB_SCHEMA")
     ensure_authenticated(user)
     required_roles = ["Administrador", "Supervisor"]
     ensure_user_roles(user, required_roles)
 
     _ensure_item_belongs_to(db, payload.TipoID, "tipo_activo", user["empresa_id"])
     _ensure_item_belongs_to(db, payload.EstadoID, "estado_activo", user["empresa_id"])
-    # _ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"])
-
+    #_ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"])
+  
+  
     row = Activo(
         empresa_id=user["empresa_id"],
         nombre=payload.Nombre.strip().upper(),
@@ -61,6 +55,7 @@ def create_asset(payload: ActivoCreate, db: Session, user: dict):
         modelo=payload.Modelo,
         propietario_id=payload.PropietarioID,
         marca=payload.Marca,
+
     )
 
     db.add(row)
@@ -68,58 +63,39 @@ def create_asset(payload: ActivoCreate, db: Session, user: dict):
     db.refresh(row)
     return row
 
-
 def list_assets(db: Session, user: dict) -> List[Activo]:
     ensure_authenticated(user)
 
-    rows = (
-        db.query(Activo)
-        .filter(
-            Activo.empresa_id == user["empresa_id"],
-            # Activo.area_item_id == user["area_id"],
-            Activo.deleted_at.is_(None),
-        )
-        .order_by(Activo.activo_id.desc())
-        .all()
-    )
-    return rows
 
+    rows = db.query(Activo).filter(
+        Activo.empresa_id == user["empresa_id"],
+       # Activo.area_item_id == user["area_id"],
+        Activo.deleted_at.is_(None)
+    ).order_by(Activo.activo_id.desc()).all()
+    return rows
 
 def search_assets(db: Session, user: dict, activo_id: int | None = None):
     ensure_authenticated(user)
     if activo_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="activo_id is required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="activo_id is required")
 
-    rows = (
-        db.query(Activo)
-        .filter(
-            Activo.empresa_id == user["empresa_id"],
-            #  Activo.area_item_id == user["area_id"],
-            (Activo.activo_id == activo_id),
-            Activo.deleted_at.is_(None),
-        )
-        .order_by(Activo.activo_id.desc())
-        .first()
-    )
+    rows = db.query(Activo).filter(
+        Activo.empresa_id == user["empresa_id"],
+      #  Activo.area_item_id == user["area_id"],
+        (Activo.activo_id == activo_id),
+        Activo.deleted_at.is_(None)
+    ).order_by(Activo.activo_id.desc()).first()
     return rows
 
-
-def update_asset(
-    db: Session, user: dict, activo_id: int, payload: ActivoUpdate
-) -> Activo:
+def update_asset(db: Session, user: dict, activo_id: int, payload:ActivoUpdate) -> Activo:
     ensure_authenticated(user)
     required_roles = ["Administrador", "Supervisor"]
     ensure_user_roles(user, required_roles)
 
-    row = (
-        db.query(Activo)
-        .filter(Activo.activo_id == activo_id, Activo.deleted_at.is_(None))
-        .first()
-    )
+    row = db.query(Activo).filter(Activo.activo_id == activo_id, Activo.deleted_at.is_(None)).first()
     if not row:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
+
 
     if payload.PropietarioID is not None:
         row.propietario_id = payload.PropietarioID or None
@@ -127,15 +103,11 @@ def update_asset(
         _ensure_item_belongs_to(db, payload.TipoID, "tipo_activo", user["empresa_id"])
         row.tipo_item_id = payload.TipoID
     if payload.EstadoID is not None:
-        _ensure_item_belongs_to(
-            db, payload.EstadoID, "estado_activo", user["empresa_id"]
-        )
+        _ensure_item_belongs_to(db, payload.EstadoID, "estado_activo", user["empresa_id"])
         row.estado_item_id = payload.EstadoID
-    if payload.TipoID in (3, 7):
+    if payload.TipoID in (3,7):
         if payload.ClasificacionID is not None:
-            _ensure_item_belongs_to(
-                db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"]
-            )
+            _ensure_item_belongs_to(db, payload.ClasificacionID, "clasificacion_activo", user["empresa_id"])
             row.clasificacion_item_id = payload.ClasificacionID
     else:
         row.clasificacion_item_id = None
@@ -166,7 +138,6 @@ def update_asset(
     db.refresh(row)
     return row
 
-
 def ensure_area_exists(db: Session, area_id: Optional[int], empresa_id: int) -> None:
     if area_id is None:
         return
@@ -178,30 +149,20 @@ def ensure_area_exists(db: Session, area_id: Optional[int], empresa_id: int) -> 
         .first()
     )
     if not exists:
-        raise HTTPException(
-            status_code=400,
-            detail=f"El área {area_id} no existe o no está disponible para la empresa.",
-        )
-
-
-def delete_asset(db: Session, user: dict, activo_id: int) -> None:
+        raise HTTPException(status_code=400, detail=f"El área {area_id} no existe o no está disponible para la empresa.")
+def delete_asset(db: Session,user:dict, activo_id: int) -> None:
     ensure_authenticated(user)
     required_roles = ["Administrador", "Supervisor"]
     ensure_user_roles(user, required_roles)
 
-    row = (
-        db.query(Activo)
-        .filter(Activo.activo_id == activo_id, Activo.deleted_at.is_(None))
-        .first()
-    )
+    row = db.query(Activo).filter(Activo.activo_id == activo_id, Activo.deleted_at.is_(None)).first()
     if not row:
         return
     # Soft delete
     from datetime import datetime, timezone
-
     row.deleted_at = datetime.now(tz=timezone.utc)
     db.commit()
-
+    
 
 def list_assets_paged(
     db: Session,
@@ -211,9 +172,12 @@ def list_assets_paged(
     offset: int = 0,
 ) -> Tuple[list[Activo], int]:
     """Lista paginada de activos con filtro por texto. Devuelve (items, total)."""
-    base = db.query(Activo).filter(
-        Activo.empresa_id == user["empresa_id"],
-        Activo.deleted_at.is_(None),
+    base = (
+        db.query(Activo)
+        .filter(
+            Activo.empresa_id == user["empresa_id"],
+            Activo.deleted_at.is_(None),
+        )
     )
 
     if q:
@@ -234,5 +198,10 @@ def list_assets_paged(
     lim = max(1, min(200, int(limit)))
     off = max(0, int(offset))
 
-    items = base.order_by(Activo.activo_id.desc()).limit(lim).offset(off).all()
+    items = (
+        base.order_by(Activo.activo_id.desc())
+        .limit(lim)
+        .offset(off)
+        .all()
+    )
     return items, total

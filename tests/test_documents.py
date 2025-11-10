@@ -5,7 +5,6 @@ from app.schemas.document import Classification
 
 client = TestClient(app)
 
-
 def test_create_and_get_document():
     # Crear un documento de prueba
     payload = {
@@ -15,7 +14,7 @@ def test_create_and_get_document():
         "author": "juan.perez",
         "reviewer": "ana.gomez",
         "approver": "luis.rodriguez",
-        "classification": Classification.CONFIDENTIAL.value,
+        "classification": Classification.CONFIDENTIAL.value
     }
     resp = client.post("/documents", json=payload)
     assert resp.status_code == 200
@@ -28,7 +27,6 @@ def test_create_and_get_document():
     assert resp2.status_code == 200
     data2 = resp2.json()
     assert data2["code"] == payload["code"]
-
 
 # def test_list_documents_empty_filters():
 #     # Sin filtros válidos, pero dummy devuelve la lista entera

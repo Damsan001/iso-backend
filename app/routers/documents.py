@@ -1,106 +1,105 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from typing import List
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from typing import List, Annotated
 from fastapi import Query
 from typing import Optional
+
+from sqlalchemy.orm import Session
+
+from app.infrastructure.db import get_db
+from app.schemas.Dtos.DocumentDtos import DocumentCreateDto, DocumentVersionDto, ComentarioRevisionDto
 from app.schemas.document import (
-    DocumentCreate,
-    Document,
-    TypeOfDocument,
-    Classification,
+    DocumentCreate, Document,
+    TypeOfDocument, Classification
 )
 from fastapi.responses import FileResponse
 from pathlib import Path
 from app.schemas.version import VersionCreate, VersionInfo
+from app.services.auth_service import get_current_user
+from app.services.document_google_service import create_documents_service, get_documents_service, view_document_service, \
+    create_document_version_service, get_document_by_id_service, create_comentario_revision_service, \
+    get_comentarios_by_version_service
 from app.services.document_service import DocumentService
 from app.infrastructure.version_repository import VersionRepository
+from app.utils.audit_context import audit_context
 
-router = APIRouter(tags=["Documentos"])
+router = APIRouter(tags=["Documentos"], dependencies=[Depends(audit_context)])
+db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 
-@router.post("/", response_model=Document)
+@router.post("/", response_model=str)
 async def create_document(
-    name: str = Form(...),
-    type: TypeOfDocument = Form(...),
-    area_responsible: str = Form(...),
-    author: str = Form(...),
-    reviewer: str = Form(...),
-    approver: str = Form(...),
-    classification: Classification = Form(...),
-    file: UploadFile = File(...),
+        db: db_dependency,
+        user: user_dependency,
+        name: str = Form(...),
+        type: str = Form(...),
+        area_responsible: str = Form(...),
+        author: str = Form(...),
+        reviewer: str = Form(...),
+        approver: str = Form(...),
+        classification: str = Form(...),
+        file: UploadFile = File(...)
 ):
-    """
-    Crea un documento:
-    - Guarda el PDF en /storage/<CODE>.pdf
-    - Registra metadata en memoria (id, código, versión=1, fecha)
-    """
-    dto = DocumentCreate(
-        name=name,
-        type=type,
-        area_responsible=area_responsible,
-        author=author,
-        reviewer=reviewer,
-        approver=approver,
-        classification=classification,
+    document = DocumentCreateDto(
+        nombre=name,
+        tipo_item_id=type,
+        area_responsable_item_id=area_responsible,
+        creador_id=author,
+        revisado_por_id=reviewer,
+        aprobado_por_id=approver,
+        clasificacion_item_id=classification
     )
-    return await DocumentService.create_document(dto, file)
+    return create_documents_service(db, user, document, file)
 
 
-@router.post("/{code}/versions", response_model=VersionInfo)
-async def create_version(
-    code: str,
-    description: str = Form(..., description="Descripción del cambio"),
-    justification: str = Form(..., description="Justificación del cambio"),
-    requested_by: str = Form(..., description="Usuario solicitante"),
-    file: UploadFile = File(...),
+@router.get("/")
+def get_documents(db: db_dependency, user: user_dependency):
+    return get_documents_service(db, user)
+
+
+@router.get("/{document_id}")
+def get_document_by_id(db: db_dependency, document_id: int):
+    document = get_document_by_id_service(db, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    return document
+
+
+# Obtener el documento por el id
+@router.get("/view/{version_id}", response_model=str)
+def view_document(db: db_dependency, version_id: int):
+    return view_document_service(db, version_id)
+
+
+@router.post("/versions/{code}", response_model=str)
+async def create_document_version(
+        code: str,
+        db: db_dependency,
+        user: user_dependency,
+        author: str = Form(...),
+        reviewer: str = Form(...),
+        approver: str = Form(...),
+        descripcion: str = Form(...),
+        justificacion: str = Form(...),
+        file: UploadFile = File(...)
 ):
-    version_data = VersionCreate(
-        description=description, justification=justification, requested_by=requested_by
+    document = DocumentVersionDto(
+
+        creador_id=author,
+        revisado_por_id=reviewer,
+        aprobador_por_id=approver,
+        descripcion=descripcion,
+        justificacion=justificacion
+
     )
-    return await DocumentService.add_version(code, version_data, file)
+    return create_document_version_service(db, user, code, document, file)
 
 
-@router.get("/{code}/versions", response_model=List[VersionInfo])
-def list_versions(code: str):
-    # opcional: validar existencia de doc_id
-    return VersionRepository.list_versions(code)
+@router.post("/comentarios", response_model=str)
+def create_comentario_revision(db: db_dependency, user: user_dependency, comentario_data: ComentarioRevisionDto):
+    return create_comentario_revision_service(db, user, comentario_data)
 
 
-@router.get("/", response_model=List[Document])
-def list_documents(
-    type: Optional[TypeOfDocument] = Query(
-        None, description="Filtrar por tipo de documento"
-    ),
-    area_responsible: Optional[str] = Query(
-        None, description="Filtrar por área responsable (texto libre)"
-    ),
-):
-    """
-    Lista documentos; acepta filtros opcionales de tipo y área.
-    """
-    return DocumentService.list_documents(type, area_responsible)
-
-
-@router.get("/{code}/view", response_class=FileResponse)
-def download_document(code: str):
-    """
-    Devuelve el PDF de la versión actual para mostrar en línea.
-    Solo usuarios con permiso 'view_document' podrán acceder.
-    """
-    # 1) Validar existencia y permisos
-    doc = DocumentService.get_document(code)
-    if not doc:
-        raise HTTPException(404, "Documento no encontrado")
-    # if not current_user.has_permission("view_document", doc_id):
-    #     raise HTTPException(403, "No tienes permiso para ver este documento")
-
-    # 2) Obtener ruta al archivo
-    file_path = DocumentService.get_latest_file_path(code)
-    if not Path(file_path).exists():
-        raise HTTPException(404, "Archivo no encontrado")
-
-    # 3) Envío inline (no fuerza descarga)
-    return FileResponse(
-        path=file_path,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{Path(file_path).name}"'},
-    )
+@router.get("/comentarios/{version_id}", response_model=List[dict])
+def get_comentarios_by_version(db: db_dependency, version_id: int):
+    return get_comentarios_by_version_service(db, version_id)

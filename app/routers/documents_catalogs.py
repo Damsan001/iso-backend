@@ -1,4 +1,4 @@
-# Archivo Routers/ Documents_Catalogs
+#Archivo Routers/ Documents_Catalogs
 from __future__ import annotations
 
 from typing import List, Optional
@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 # Reutilizamos la infraestructura y helper de catálogos
 from app.infrastructure.assets import (
     SessionLocal,
+    Catalog,
+    CatalogItem,
     get_catalog_items,
 )
 
@@ -56,13 +58,10 @@ def _resolve_empresa_id(
 #                       ENDPOINTS
 # ============================================================
 
-
 @router.get("/tipos", response_model=List[CatalogoItemSimple])
 def listar_tipos(
     request: Request,
-    empresa_id: Optional[int] = Query(
-        None, description="Empresa que solicita el catálogo"
-    ),
+    empresa_id: Optional[int] = Query(None, description="Empresa que solicita el catálogo"),
     db: Session = Depends(get_db),
 ):
     """

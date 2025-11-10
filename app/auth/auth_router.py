@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import csv
 from pathlib import Path
@@ -7,16 +7,14 @@ from app.auth.auth_handler import crear_token
 
 router = APIRouter()
 
-
 class LoginInput(BaseModel):
     correo: str
     contrasena: str
 
-
 @router.post("/login")
 def login(data: LoginInput):
     archivo = Path(__file__).parent.parent.parent / "data" / "usuarios.csv"
-    with open(archivo, newline="", encoding="utf-8") as f:
+    with open(archivo, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row["Correo"] == data.correo:

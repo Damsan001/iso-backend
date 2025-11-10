@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional, Annotated
-from fastapi import APIRouter, Depends, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
@@ -14,7 +14,6 @@ db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 router = APIRouter(prefix="/catalogo", tags=["Catálogos de Activos"])
 
-
 def _resolve_empresa_id(request: Request, q_empresa_id: Optional[int] = None) -> int:
     if q_empresa_id and q_empresa_id > 0:
         return int(q_empresa_id)
@@ -23,7 +22,6 @@ def _resolve_empresa_id(request: Request, q_empresa_id: Optional[int] = None) ->
         return int(hdr)
     return 1
 
-
 def _get_catalog_items(db: Session, catalog_key: str, empresa_id: int):
     q = (
         db.query(CatalogItem)
@@ -31,46 +29,28 @@ def _get_catalog_items(db: Session, catalog_key: str, empresa_id: int):
         .filter(Catalog.catalog_key == catalog_key)
         .filter(CatalogItem.active.is_(True))
         .filter(CatalogItem.deleted_at.is_(None))
-        .filter(
-             or_(CatalogItem.empresa_id.is_(None), CatalogItem.empresa_id == empresa_id)
-        )
+        .filter(or_(CatalogItem.empresa_id == None, CatalogItem.empresa_id == empresa_id))
         .order_by(CatalogItem.sort_order, CatalogItem.name)
     )
     return q.all()
 
-
 @router.get("/tipos-activo", response_model=List[CatalogoItemSimple])
-def catalogo_tipos_activo(
-    request: Request,
-    empresa_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-):
+def catalogo_tipos_activo(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
     emp = _resolve_empresa_id(request, empresa_id)
     return _get_catalog_items(db, "tipo_activo", emp)
 
-
 @router.get("/estatus", response_model=List[CatalogoItemSimple])
-def catalogo_estatus_activo(
-    request: Request,
-    empresa_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-):
+def catalogo_estatus_activo(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
     emp = _resolve_empresa_id(request, empresa_id)
     return _get_catalog_items(db, "estado_activo", emp)
 
-
 @router.get("/clasificaciones", response_model=List[CatalogoItemSimple])
-def catalogo_clasificaciones_activo(
-    request: Request,
-    empresa_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-):
+def catalogo_clasificaciones_activo(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
     emp = _resolve_empresa_id(request, empresa_id)
     return _get_catalog_items(db, "clasificacion_activo", emp)
 
-
 @router.get("/areas", response_model=List[CatalogoItemSimple])
-def catalogo_areas(db: db_dependency, user: user_dependency):
+def catalogo_areas(db:db_dependency,user: user_dependency):
     areas = (
         db.query(Areas.area_id.label("id"), Areas.nombre.label("name"))
         .filter(Areas.empresa_id == user["empresa_id"])
