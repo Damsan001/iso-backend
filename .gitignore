@@ -146,7 +146,7 @@ env.bak/
 venv.bak/
 http-client.env.json
 cloud-storage.json
-
+.secrets/
 # Spyder project settings
 .spyderproject
 .spyproject
