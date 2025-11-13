@@ -1,7 +1,13 @@
+#router/documents
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from typing import List, Annotated
 from fastapi import Query
 from typing import Optional
+from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
+import httpx
+from app.services import document_service
+
 
 from sqlalchemy.orm import Session
 
@@ -21,6 +27,7 @@ from app.services.document_google_service import create_documents_service, get_d
 from app.services.document_service import DocumentService
 from app.infrastructure.version_repository import VersionRepository
 from app.utils.audit_context import audit_context
+from app.services.document_service import DocumentService
 
 router = APIRouter(tags=["Documentos"], dependencies=[Depends(audit_context)])
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -103,3 +110,24 @@ def create_comentario_revision(db: db_dependency, user: user_dependency, comenta
 @router.get("/comentarios/{version_id}", response_model=List[dict])
 def get_comentarios_by_version(db: db_dependency, version_id: int):
     return get_comentarios_by_version_service(db, version_id)
+
+
+@router.get("/documents/preview/{version_id}")
+async def preview_document(version_id: int, db: Session = Depends(get_db)):
+    service = DocumentService()
+    signed_url = await service.get_signed_view_url(version_id, db)
+    if not signed_url:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    async def stream():
+        async with httpx.AsyncClient(timeout=30) as client:
+            async with client.stream("GET", signed_url, headers={"Accept": "application/pdf"}) as resp:
+                resp.raise_for_status()
+                async for chunk in resp.aiter_bytes(64 * 1024):
+                    yield chunk
+
+    return StreamingResponse(
+        stream(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline; filename=\"documento.pdf\""},
+    )

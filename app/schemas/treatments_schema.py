@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
 
 class _ExtraIgnore(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -25,17 +26,26 @@ class TratamientoUpdate(_ExtraIgnore):
 # ====== Out ======
 class TratamientoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-    tratamiento_id: int
-    empresa_id: int
-    riesgo_id: int
-    tipo_plan: str
-    responsable_id: Optional[int] = None
-    fecha_compromiso: Optional[str] = None
-    estatus: str
-    score_inicial: Optional[int] = None
-    efectividad: Optional[int] = None
-    residual_score: Optional[int] = None
-    residual_color: Optional[str] = None
+    tratamiento_id: int = Field(validation_alias="TratamientoID")
+    empresa_id: int = Field(validation_alias="EmpresaID")
+    riesgo_id: int = Field(validation_alias="RiesgoID")
+
+   
+    responsable_id: Optional[int] = Field(default=None, validation_alias="ResponsableID")
+
+    # <-- clave: el backend te está devolviendo datetime, no string
+    fecha_compromiso: Optional[datetime] = Field(default=None, validation_alias="FechaCompromiso")
+    #tipo_plan: str = Field(validation_alias="TipoPlan")
+    #estatus: str = Field(validation_alias="Estatus")
+    
+     # Opción A (lo más seguro con lo que tienes hoy):
+    tipo_plan_item_id: Optional[int] = None            # ← coincide con el atributo real del modelo
+    estatus: Optional[int] = None     
+
+    score_inicial: Optional[int] = Field(default=None, validation_alias="ScoreInicial")
+    efectividad: Optional[int] = Field(default=None, validation_alias="Efectividad")
+    residual_score: Optional[int] = Field(default=None, validation_alias="ResidualScore")
+    residual_color: Optional[str] = Field(default=None, validation_alias="ResidualColor")
 
 class TratamientoListPage(BaseModel):
     items: List[TratamientoOut]

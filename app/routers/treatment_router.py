@@ -19,15 +19,15 @@ db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
 # ===== Catálogos =====
-@router.get("/tratamientos/catalogos/plan")
+@router.get("/catalogos/plan")
 def catalogo_plan(db: db_dependency, user: user_dependency):
     return svc.get_catalog_items(db, "treatment_plan")
 
-@router.get("/tratamientos/catalogos/estatus")
+@router.get("/catalogos/estatus")
 def catalogo_estatus(db: db_dependency, user: user_dependency):
     return svc.get_catalog_items(db, "treatment_status")
 
-@router.get("/tratamientos/catalogos/efectividad")
+@router.get("/catalogos/efectividad")
 def catalogo_efectividad(db: db_dependency, user: user_dependency):
     return svc.get_catalog_items(db, "treatment_effectiveness")
 
@@ -37,7 +37,7 @@ def buscar_riesgos(q: str = "", limit: int = 20, db: db_dependency = None, user:
     return svc.search_risks_for_treatments(db, user, q, limit)
 
 # ===== Listado / CRUD Tratamientos =====
-@router.get("/tratamientos", response_model=TratamientoListPage)
+@router.get("/", response_model=TratamientoListPage)
 def listar_tratamientos(
     db: db_dependency,
     user: user_dependency,
@@ -50,7 +50,7 @@ def listar_tratamientos(
     items, total = svc.list_tratamientos_paged(db, user, riesgo_id, q, page_size, offset)
     return {"items": items, "total": total}
 
-@router.get("/tratamientos/{tratamiento_id}", response_model=TratamientoOut)
+@router.get("/{tratamiento_id}", response_model=TratamientoOut)
 def obtener_tratamiento(tratamiento_id: int, db: db_dependency, user: user_dependency):
     row = svc.get_tratamiento(db, user, tratamiento_id)
     if not row:
@@ -61,38 +61,38 @@ def obtener_tratamiento(tratamiento_id: int, db: db_dependency, user: user_depen
 def crear_tratamiento(riesgo_id: int, payload: TratamientoCreate, db: db_dependency, user: user_dependency):
     return svc.create_tratamiento(db, user, riesgo_id, payload)
 
-@router.patch("/tratamientos/{tratamiento_id}", response_model=TratamientoOut)
+@router.patch("/{tratamiento_id}", response_model=TratamientoOut)
 def actualizar_tratamiento(tratamiento_id: int, payload: TratamientoUpdate, db: db_dependency, user: user_dependency):
     return svc.update_tratamiento(db, user, tratamiento_id, payload)
 
-@router.delete("/tratamientos/{tratamiento_id}", status_code=204)
+@router.delete("/{tratamiento_id}", status_code=204)
 def eliminar_tratamiento(tratamiento_id: int, db: db_dependency, user: user_dependency):
     svc.delete_tratamiento(db, user, tratamiento_id)
 
 # ===== Controles =====
-@router.post("/tratamientos/{tratamiento_id}/controles", response_model=TratamientoControlOut)
+@router.post("/{tratamiento_id}/controles", response_model=TratamientoControlOut)
 def agregar_control(tratamiento_id: int, payload: TratamientoControlCreate, db: db_dependency, user: user_dependency):
     return svc.add_control(db, user, tratamiento_id, payload)
 
-@router.delete("/tratamientos/{tratamiento_id}/controles/{tcontrol_id}", status_code=204)
+@router.delete("/{tratamiento_id}/controles/{tcontrol_id}", status_code=204)
 def quitar_control(tratamiento_id: int, tcontrol_id: int, db: db_dependency, user: user_dependency):
     svc.remove_control(db, user, tratamiento_id, tcontrol_id)
 
 # ===== Seguimientos =====
-@router.post("/tratamientos/{tratamiento_id}/seguimientos", response_model=TratamientoSeguimientoOut)
+@router.post("/{tratamiento_id}/seguimientos", response_model=TratamientoSeguimientoOut)
 def agregar_seguimiento(tratamiento_id: int, payload: TratamientoSeguimientoCreate, db: db_dependency, user: user_dependency):
     return svc.add_seguimiento(db, user, tratamiento_id, payload)
 
-@router.get("/tratamientos/{tratamiento_id}/seguimientos", response_model=list[TratamientoSeguimientoOut])
+@router.get("/{tratamiento_id}/seguimientos", response_model=list[TratamientoSeguimientoOut])
 def listar_seguimientos(tratamiento_id: int, db: db_dependency, user: user_dependency):
     return svc.list_seguimientos(db, user, tratamiento_id)
 
 # ===== Evidencias =====
-@router.post("/tratamientos/{tratamiento_id}/evidencias", response_model=TratamientoEvidenciaOut)
+@router.post("/{tratamiento_id}/evidencias", response_model=TratamientoEvidenciaOut)
 def agregar_evidencia(tratamiento_id: int, payload: TratamientoEvidenciaCreate, db: db_dependency, user: user_dependency):
     return svc.add_evidencia(db, user, tratamiento_id, payload)
 
 # ===== Carta de aceptación =====
-@router.post("/tratamientos/{tratamiento_id}/carta-aceptacion", response_model=CartaAceptacionOut)
+@router.post("/{tratamiento_id}/carta-aceptacion", response_model=CartaAceptacionOut)
 def generar_carta(tratamiento_id: int, payload: CartaAceptacionCreate, db: db_dependency, user: user_dependency):
     return svc.generar_carta_aceptacion(db, user, tratamiento_id, payload.Justificacion)

@@ -154,6 +154,7 @@ def get_documents_service(db: Session, user: dict):
         db.query(
             Documento.codigo,
             Documento.nombre,
+            Documento.documento_id,
             DocumentoVersion.numero_version,
             tipo_item.name.label("tipo"),
             Areas.nombre.label("area"),

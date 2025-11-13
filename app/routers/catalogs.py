@@ -33,6 +33,16 @@ def _get_catalog_items(db: Session, catalog_key: str, empresa_id: int):
         .order_by(CatalogItem.sort_order, CatalogItem.name)
     )
     return q.all()
+@router.get("/catalogo_clasificacion_documentos", response_model=List[CatalogoItemSimple])
+def catalogo_clasificacion_documentos(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    emp = _resolve_empresa_id(request, empresa_id)
+    return _get_catalog_items(db, "clasificacion_documento", emp)
+
+
+@router.get("/tipos-documentos", response_model=List[CatalogoItemSimple])
+def catalogo_tipos_documentos(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    emp = _resolve_empresa_id(request, empresa_id)
+    return _get_catalog_items(db, "tipo_documento", emp)
 
 @router.get("/tipos-activo", response_model=List[CatalogoItemSimple])
 def catalogo_tipos_activo(request: Request, empresa_id: Optional[int] = Query(None), db: Session = Depends(get_db)):

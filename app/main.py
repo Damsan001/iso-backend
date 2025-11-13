@@ -15,6 +15,8 @@ from app.routers.assets import router as assets_router
 from app.routers.admin import router as admin_router
 from app.users.users_router import router as users_router
 from contextlib import asynccontextmanager
+from app.routers.risk_router import router as risk_router
+from app.routers.treatment_router import router as treatment_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -49,7 +51,11 @@ app.include_router(users_router, prefix="/users", tags=["Usuarios"])
 app.include_router(documents_router, prefix="/documents", tags=["Documentos"])
 app.include_router(reports_router, prefix="/reports", tags=["Reportes"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
+app.include_router(risk_router, prefix="/risks", tags=["Riesgos"])
+app.include_router(risk_router, prefix="/riesgos", tags=["Riesgos"])
 
+app.include_router(treatment_router, prefix="/treatments", tags=["Tratamientos"])
+app.include_router(treatment_router, prefix="/tratamientos", tags=["Tratamientos"])
 
 
 # Routers con prefijos locales
