@@ -323,7 +323,15 @@ def create_document_version_service(db: Session, user: dict, document_code: str,
 
     try:
         db.commit()
-        send_document_notifications(db=db, version_id=new_version_number)
+        send_document_notifications(db=db, version_id=new_version.version_id)
+        _overlay_pdf_with_status_image(
+            db,
+            file_url,
+            initial_state.item_id,
+            signer_name=str(document_data.creador_id),
+            fecha=datetime.now()
+        )
+
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
