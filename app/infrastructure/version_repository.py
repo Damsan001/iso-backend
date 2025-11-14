@@ -2,8 +2,11 @@ import csv
 from pathlib import Path
 from datetime import datetime
 from typing import List
+from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.schemas.version import VersionCreate, VersionInfo
+from .models import DocumentoVersion
 
 BASE_DIR = Path("data")
 VERS_CSV = BASE_DIR / "document_versions.csv"

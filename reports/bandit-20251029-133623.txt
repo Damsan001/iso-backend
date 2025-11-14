@@ -1,0 +1,7 @@
+﻿python.exe : [main]	INFO	profile include tests: None
+En C:\Proyectos\ISO27001\Api_ISO\run_static_tests.ps1: 124 Carácter: 5
++     & $python -m bandit -r $banditTargets -lll
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([main]	INFO	profile include tests: None:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

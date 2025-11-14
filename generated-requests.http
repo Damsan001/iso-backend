@@ -174,7 +174,7 @@ Authorization: Bearer {{TOKEN}}
 
 [5]
 ###
-POST {{BASE_URL}}/documents/create
+POST {{BASE_URL}}//create
 Content-Type: multipart/form-data; boundary=boundary
 Authorization: Bearer {{TOKEN}}
 

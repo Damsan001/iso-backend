@@ -1,0 +1,4 @@
+﻿Backend static checks - 2025-10-28 17:09:39Z
+RaÃ­z del proyecto: C:\Proyectos\ISO27001\Api_ISO
+Python Python 3.10.8
+
