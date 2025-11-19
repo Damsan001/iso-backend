@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, List,Dict
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -20,6 +20,7 @@ class RiesgoGeneralCreate(_ExtraIgnore):
     DisponibilidadID: Optional[int] = None
     ConfidencialidadID: Optional[int] = None
 
+
 class RiesgoGeneralUpdate(_ExtraIgnore):
     Nombre: Optional[str] = Field(None, min_length=1, max_length=200)
     Descripcion: Optional[str] = None
@@ -31,7 +32,8 @@ class RiesgoGeneralUpdate(_ExtraIgnore):
     IntegridadID: Optional[int] = None
     DisponibilidadID: Optional[int] = None
     ConfidencialidadID: Optional[int] = None
-    
+
+
 class RiesgoGeneralOut(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     riesgo_id: int
@@ -47,7 +49,8 @@ class RiesgoGeneralOut(BaseModel):
     score: Optional[int] = None
     integridad_item_id: Optional[int] = 0
     disponibilidad_item_id: Optional[int] = 0
-    confidencialidad_item_id : Optional[int] = 0
+    confidencialidad_item_id: Optional[int] = 0
+
 
 class RiesgoGeneralListPage(BaseModel):
     items: List[RiesgoGeneralOut]
@@ -64,16 +67,18 @@ class RiesgoActivoCreate(_ExtraIgnore):
     Vulnerabilidad: Optional[str] = None
     PropietarioID: Optional[int] = None
     Score: Optional[int] = None
-     # prob/impact/nivel: directos (para activos != IND/INF/SOF)
+    # prob/impact/nivel: directos (para activos != IND/INF/SOF)
     ProbabilidadID: Optional[int] = Field(None, alias="probabilidad_item_id")
-    ImpactoID: Optional[int]      = Field(None, alias="impacto_item_id")
-    NivelID: Optional[int]        = Field(None, alias="nivel_item_id")
-    IntegridadID: Optional[int]   = Field(None, alias="integridad_item_id")
+    ImpactoID: Optional[int] = Field(None, alias="impacto_item_id")
+    NivelID: Optional[int] = Field(None, alias="nivel_item_id")
+    IntegridadID: Optional[int] = Field(None, alias="integridad_item_id")
     DisponibilidadID: Optional[int] = Field(None, alias="disponibilidad_item_id")
     ConfidencialidadID: Optional[int] = Field(None, alias="confidencialidad_item_id")
-    
+
+
 class RiesgoActivoUpdate(RiesgoActivoCreate):
     Nombre: Optional[str] = None
+
 
 class RiesgoActivoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
@@ -94,7 +99,8 @@ class RiesgoActivoOut(BaseModel):
     integridad_item_id: Optional[int] = 0
     disponibilidad_item_id: Optional[int] = 0
     confidencialidad_item_id: Optional[int] = 0
-    
+
+
 class RiesgoActivoListPage(BaseModel):
     items: List[RiesgoActivoOut]
     total: int
@@ -117,6 +123,7 @@ class RiesgoGeneralViewOut(BaseModel):
     nivel_item_id: Optional[int] = None
     nivel_nombre: Optional[str] = None
     score: Optional[int] = None
+
 
 class RiesgoActivoViewOut(BaseModel):
     riesgo_id: int
@@ -145,19 +152,23 @@ class RiesgoActivoViewOut(BaseModel):
     disponibilidad_nombre: Optional[str] = None
     confidencialidad_item_id: Optional[int] = None
     confidencialidad_nombre: Optional[str] = None
-        
-class CatalogItemOut(BaseModel):    
+
+
+class CatalogItemOut(BaseModel):
     item_id: int
     code: Optional[str] = None
     name: str
     sort_order: Optional[int] = None
 
+
 class CatalogResolveItemIn(BaseModel):
     key: str
     item_id: int
 
+
 class CatalogResolveRequest(BaseModel):
     items: List[CatalogResolveItemIn]
+
 
 class CatalogResolveResponse(BaseModel):
     # {"probabilidad": {"45": {item}}, "impacto": {...}}

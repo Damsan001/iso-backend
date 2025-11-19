@@ -1,0 +1,11 @@
+﻿Python exe : C:\Proyectos\ISO27001\Api_ISO\.venv\Scripts\python.exe
+Python ver : 3.10.8 (tags/v3.10.8:aaaf517, Oct 11 2022, 16:50:30) [MSC v.1933 64 bit (AMD64)]
+Workdir    : C:\Proyectos\ISO27001\Api_ISO
+
+=== Static Analysis Summary ===
+ruff      : exit-code 1 -> ruff-20251029-133623.txt
+mypy      : exit-code 2 -> mypy-20251029-133623.txt
+bandit    : exit-code 1 -> bandit-20251029-133623.txt
+pip-audit : exit-code 1 -> pip-audit-20251029-133623.txt
+
+Archivos en: C:\Proyectos\ISO27001\Api_ISO\reports

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette import status
@@ -16,8 +16,8 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from app.utils.audit_context import audit_context
 from app.services.auth_service import create_user, authenticate_user, create_access_token, get_current_user, \
-    buscar_usuarios, obtener_permisos_usuario, obtener_roles_usuario, activate_user, reset_password_service, forgot_password_service
-
+    buscar_usuarios, obtener_permisos_usuario, obtener_roles_usuario, activate_user, reset_password_service, \
+    forgot_password_service, upload_firma_service
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 load_dotenv()
@@ -55,6 +55,7 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     payload = {
         "sub": str(user.usuario_id),
         "email": user.email,
+        "first_name": user.first_name,
         "last_name": user.last_name,
         "empresa_id": user.empresa_id,
         "area_id": user.area_id,
@@ -100,3 +101,23 @@ def forgot_password(email: str, background_tasks: BackgroundTasks, db: Session =
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
     resp = reset_password_service(request.token, request.new_password, request.confirm_password, db)
     return resp
+
+@router.post("/user/firma", status_code=status.HTTP_200_OK)
+async def upload_firma_endpoint(
+    db: db_dependency,
+    user: user_dependency,
+    file: Annotated[UploadFile, File(...)]
+):
+    """
+    Sube la imagen de la firma y guarda la URL en Usuario.url_firma.
+    Retorna: { "url_firma": "<public_url>" }
+    """
+    try:
+        public_url = upload_firma_service(db, user, file)
+    except HTTPException as e:
+        # re-lanzar HTTPException tal cual para que FastAPI maneje el status y detalle
+        raise e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error subiendo la firma")
+
+    return {"url_firma": public_url}

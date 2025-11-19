@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.models import AuditLog
 from app.infrastructure.audit_vars import current_actor  # <- usa la ContextVar compartida
 from app.utils.decimal_utils import convert_decimal
+from datetime import datetime
 
 @event.listens_for(Session, "before_flush")
 def audit_before_flush(session: Session, flush_context, instances):
@@ -37,6 +38,16 @@ def audit_before_flush(session: Session, flush_context, instances):
             after[key] = hist.added[0] if hist.added else getattr(obj, key)
         return before, after
 
+    def serialize_for_json(data):
+        if isinstance(data, dict):
+            return {k: serialize_for_json(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [serialize_for_json(i) for i in data]
+        elif isinstance(data, datetime):
+            return data.isoformat()
+        else:
+            return data
+
     for obj in list(session.new):
         if isinstance(obj, AuditLog):
             continue
@@ -44,10 +55,10 @@ def audit_before_flush(session: Session, flush_context, instances):
             table_name=inspect(obj).mapper.local_table.name,
             operation="CREATE",
             target_pk_id=_pk_value(obj),
-            target_pk=convert_decimal(_pk_dict(obj)),
+            target_pk=serialize_for_json(convert_decimal(_pk_dict(obj))),
             actor=str(actor) if actor is not None else None,
             before=None,
-            after=convert_decimal(_serialize_instance(obj)),
+            after=serialize_for_json(convert_decimal(_serialize_instance(obj))),
         ))
 
     for obj in list(session.dirty):
@@ -63,10 +74,10 @@ def audit_before_flush(session: Session, flush_context, instances):
             table_name=inspect(obj).mapper.local_table.name,
             operation="UPDATE",
             target_pk_id=_pk_value(obj),
-            target_pk=convert_decimal(_pk_dict(obj)),
+            target_pk=serialize_for_json(convert_decimal(_pk_dict(obj))),
             actor=str(actor) if actor is not None else None,
-            before=convert_decimal(before),
-            after=convert_decimal(after),
+            before=serialize_for_json(convert_decimal(before)),
+            after=serialize_for_json(convert_decimal(after)),
         ))
 
     for obj in list(session.deleted):
@@ -77,8 +88,8 @@ def audit_before_flush(session: Session, flush_context, instances):
             table_name=state.mapper.local_table.name,
             operation="DELETE",
             target_pk_id=_pk_value(obj),
-            target_pk=_pk_dict(obj),
+            target_pk=serialize_for_json(_pk_dict(obj)),
             actor=str(actor) if actor is not None else None,
-            before=_serialize_instance(obj),
+            before=serialize_for_json(_serialize_instance(obj)),
             after=None,
         ))

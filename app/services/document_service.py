@@ -8,11 +8,20 @@ from app.infrastructure.version_repository import VersionRepository
 from app.services.storage_service import LocalStorageService
 from app.schemas.document import TypeOfDocument
 from app.utils.text_utils import clear_name
+from typing import Optional
+from sqlalchemy.orm import Session
+from app.infrastructure.version_repository import VersionRepository
+from app.services import document_google_service  
+from app.services.document_google_service import view_document_service
+
+from typing import Optional, Callable
+from app.infrastructure.version_repository import VersionRepository
+from app.services.document_google_service import view_document_service
 
 storage = LocalStorageService()
 
 class DocumentService:
-
+    
     @staticmethod
     async def create_document(data: DocumentCreate, file: UploadFile) -> Document:
         # 1) Validar existencia
@@ -117,6 +126,7 @@ class DocumentService:
         return doc
 
     @staticmethod
+    
     def get_latest_file_path(code: str) -> Path:
         """
         Recupera la ruta al PDF de la versión actual del documento.
@@ -126,3 +136,23 @@ class DocumentService:
         if not doc:
             raise HTTPException(404, "Documento no encontrado")
         return storage.get_file_path(doc.code, doc.version)
+    
+    async def get_signed_view_url(self, version_id: int, db: Session) -> Optional[str]:
+        
+        if not version_id:
+            # Si no hay versión, devolvemos 404 claro
+            raise HTTPException(
+                status_code=404,
+                detail="No se encontró una versión para este documento"
+            )
+
+        # Reutiliza tu servicio que ya funciona con version_id
+        url = view_document_service(db, version_id)
+
+        if not url:
+            raise HTTPException(
+                status_code=404,
+                detail="No se pudo generar la URL firmada para la versión actual"
+            )
+
+        return url

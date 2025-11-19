@@ -2,7 +2,7 @@ import csv
 from pathlib import Path
 from datetime import date
 from typing import List, Optional
-
+#infraestructura/document_repository
 from app.schemas.document import DocumentCreate, Document, TypeOfDocument, Classification
 
 BASE_DIR = Path("data")

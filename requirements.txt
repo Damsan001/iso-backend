@@ -15,3 +15,7 @@ alembic>=1.13,<2.0
 passlib==1.7.4
 dotenv
 starlette
+google-cloud-storage
+reportlab
+PyPDF2
+Pillow

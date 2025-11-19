@@ -15,8 +15,8 @@ from app.routers.assets import router as assets_router
 from app.routers.admin import router as admin_router
 from app.users.users_router import router as users_router
 from contextlib import asynccontextmanager
-from app.routers.risk_router import router as risks_router
-from app.routers import risk_router
+from app.routers.risk_router import router as risk_router
+from app.routers.treatment_router import router as treatment_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -28,11 +28,12 @@ app = FastAPI(title="Gestión Documental ISO27001", lifespan=lifespan)
 
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:3001",
     "http://127.0.0.1:3000",
+    "http://localhost:3001",
     "http://127.0.0.1:3001",
     "https://appiso.insaight.com.mx",
-    "https://appisoqa.insaight.com.mx"
+    "https://appisoqa.insaight.com.mx",
+    "https://iso-frontend-9479.onrender.com"
 ]
 
 app.add_middleware(
@@ -51,7 +52,12 @@ app.include_router(users_router, prefix="/users", tags=["Usuarios"])
 app.include_router(documents_router, prefix="/documents", tags=["Documentos"])
 app.include_router(reports_router, prefix="/reports", tags=["Reportes"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
-app.include_router(risks_router, prefix="/riesgos", tags=["Riesgos"])
+app.include_router(risk_router, prefix="/risks", tags=["Riesgos"])
+app.include_router(risk_router, prefix="/riesgos", tags=["Riesgos"])
+
+app.include_router(treatment_router, prefix="/treatments", tags=["Tratamientos"])
+app.include_router(treatment_router, prefix="/tratamientos", tags=["Tratamientos"])
+
 
 # Routers con prefijos locales
 # app.include_router(auth_router,      prefix="/auth",      tags=["Autenticación"])
@@ -61,7 +67,6 @@ app.include_router(risks_router, prefix="/riesgos", tags=["Riesgos"])
 
 app.include_router(catalogs_router)
 app.include_router(assets_router)
-app.include_router(risk_router.router)
 
 
 @app.get("/", tags=["Health"])
