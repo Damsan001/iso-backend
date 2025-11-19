@@ -35,6 +35,7 @@ ALLOWED_ORIGINS = [
     "https://appisoqa.insaight.com.mx",
     "https://iso-frontend-9479.onrender.com"
 ]
+ALLOWED_ORIGINS = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
