@@ -148,6 +148,8 @@ http-client.env.json
 # Spyder project settings
 .spyderproject
 .spyproject
+cloud-storage.json
+.secrets/
 
 # Rope project settings
 .ropeproject
