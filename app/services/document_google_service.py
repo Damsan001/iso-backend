@@ -123,7 +123,8 @@ def create_documents_service(db: Session, user: dict, document_data: DocumentCre
             new_version.archivo_url,
             initial_state.item_id,
             signer_name=str(document_data.creador_id),
-            fecha=datetime.now( )
+            fecha=datetime.now( ),
+            nombre_documento=document_data.nombre
         )
 
     except IntegrityError as e:
@@ -323,7 +324,16 @@ def create_document_version_service(db: Session, user: dict, document_code: str,
 
     try:
         db.commit()
-        send_document_notifications(db=db, version_id=new_version_number)
+        send_document_notifications(db=db, version_id=new_version.version_id)
+        _overlay_pdf_with_status_image(
+            db,
+            file_url,
+            initial_state.item_id,
+            signer_name=str(document_data.creador_id),
+            fecha=datetime.now(),
+            nombre_documento=document_data.nombre
+        )
+
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
@@ -431,7 +441,7 @@ def get_comentarios_by_version_service(db: Session, version_id: int):
     return [dict(r._mapping) for r in resultados]
 
 
-def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, signer_name: str = None, fecha: datetime = None):
+def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, signer_name: str = None, fecha: datetime = None,nombre_documento: str | None = None):
     if not archivo_url:
         return False
 
@@ -627,6 +637,37 @@ def _overlay_pdf_with_status_image(db, archivo_url: str, status_item_id: int, si
         # Crear overlay
         packet = BytesIO()
         c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+        
+        # ====== TÍTULO: NombreDocumento ======
+        if nombre_documento:
+            # Fuente para el título
+            font_name = "Helvetica-Bold"
+            font_size_title = 16
+            c.setFont(font_name, font_size_title)
+
+            # Coordenadas aproximadas del placeholder «NombreDocumento»
+            # (ajusta estos valores a ojo hasta que quede perfecto)
+            title_x = page_width / 2  # centrado
+            title_y = page_height / 2 + 80  # un poco arriba del centro
+
+            # Ancho del texto para poder "borrar" el placeholder de fondo
+            text_width = pdfmetrics.stringWidth(nombre_documento, font_name, font_size_title)
+
+            # Pintar un rectángulo blanco para cubrir «NombreDocumento»
+            c.setFillColorRGB(1, 1, 1)  # blanco
+            c.rect(
+                title_x - text_width / 2 - 10,  # x
+                title_y - 4,                     # y
+                text_width + 20,                 # ancho
+                font_size_title + 8,             # alto
+                fill=1,
+                stroke=0,
+            )
+
+            # Escribir el nombre real del documento
+            c.setFillColorRGB(0, 0, 0)  # negro
+            c.drawCentredString(title_x, title_y, nombre_documento)
+        # ====== FIN TÍTULO ======
 
         # Dibujar imagen en la parte inferior
         c.drawImage(
