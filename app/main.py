@@ -33,7 +33,8 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3001",
     "https://appiso.insaight.com.mx",
     "https://appisoqa.insaight.com.mx",
-    "https://iso-frontend-9479.onrender.com"
+    "https://iso-frontend-9479.onrender.com",
+    "https://iso-backend-qa.onrender.com"
 ]
 
 app.add_middleware(
